@@ -115,7 +115,8 @@ func (pn *PetriNet) fire(currT int) {
 }
 
 func main() {
-  fpt := []Arc{Arc{1, 1, 1}, Arc{2, 2, 1}, Arc{3, 2, 1}}
+  //pId := 123
+  fpt := []Arc{Arc{p: 1, t: 1, w: 1}, Arc{p: 2, t: 2, w: 1}, Arc{p: 3, t: 2, w: 1}}
   ftp := []Arc{Arc{t: 1, p: 2, w: 1}, Arc{t: 1, p: 3, w: 1}, Arc{t: 2, p: 4, w: 1}}
   m := make(map[int]int)
   inhi := []Arc{Arc{t: 2, p: 4, w:1}}
@@ -126,3 +127,10 @@ func main() {
   fmt.Printf("%v", p)
   p.Run()
 }
+/*
+Hacer ejercicio de mutual exclution distribuido
+que pasa si se conecta en medio de elegir y fire
+Definir las reglas
+ext 1 -> distribuido y experimentos (con trans normales, despues reactivas) (mail para conectar nodos)
+ext 2 -> reacciones reactivas (prioridades)
+*/
