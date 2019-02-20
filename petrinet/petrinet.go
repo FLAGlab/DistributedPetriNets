@@ -25,25 +25,17 @@ eg.
   M: [{p: 1, m: 1}, {p: 3, m: 2}, {p: 4, m: 1}],
 }
 */
-package main
+package petrinet
 
 import (
   "fmt"
   "math/rand"
 )
 
-type Arc struct {
-  p int
-  t int
-  w int
-}
-func (a Arc) String() string {
-	return fmt.Sprintf("{p: %v, t: %v, w: %v}", a.p, a.t, a.w)
-}
-
 type PetriNet struct {
   p int
   t int
+
   tIn map[int][]Arc
   tOut map[int][]Arc
   inhibitors map[int][]Arc
@@ -54,7 +46,7 @@ func (pn PetriNet) String() string {
 	return fmt.Sprintf("{\n\tp: %v, \n\tt: %v, \n\ttIn: %v, \n\ttOut: %v, \n\tm: %v\n}", pn.p, pn.t, pn.tIn, pn.tOut, pn.m)
 }
 
-func initPetriNet(p, t int, fpt, ftp, inhi []Arc, m0 map[int]int) PetriNet {
+func InitPetriNet(p, t int, fpt, ftp, inhi []Arc, m0 map[int]int) PetriNet {
   tIn  := make(map[int][]Arc)
   tOut := make(map[int][]Arc)
   inhibitors := make(map[int][]Arc)
@@ -114,16 +106,15 @@ func (pn *PetriNet) fire(currT int) {
   }
 }
 
-func main() {
-  //pId := 123
+func Test(){
   fpt := []Arc{Arc{p: 1, t: 1, w: 1}, Arc{p: 2, t: 2, w: 1}, Arc{p: 3, t: 2, w: 1}}
-  ftp := []Arc{Arc{t: 1, p: 2, w: 1}, Arc{t: 1, p: 3, w: 1}, Arc{t: 2, p: 4, w: 1}}
-  m := make(map[int]int)
-  inhi := []Arc{Arc{t: 2, p: 4, w:1}}
-  m[1] = 1
-  m[3] = 2
-  m[4] = 1
-  p := initPetriNet(4, 2, fpt, ftp, inhi, m)
+	ftp := []Arc{Arc{t: 1, p: 2, w: 1}, Arc{t: 1, p: 3, w: 1}, Arc{t: 2, p: 4, w: 1}}
+	m := make(map[int]int)
+	inhi := []Arc{Arc{t: 2, p: 4, w:1}}
+	m[1] = 1
+	m[3] = 2
+	m[4] = 1
+	p := InitPetriNet(4, 2, fpt, ftp, inhi, m)
   fmt.Printf("%v", p)
   p.Run()
 }
