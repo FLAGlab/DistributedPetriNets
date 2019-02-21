@@ -29,13 +29,14 @@ package petrinet
 
 import (
   "fmt"
+  "math"
   "math/rand"
 )
 
 type PetriNet struct {
  id int
  transitions map[int]*transition
- places map[int]*place 
+ places map[int]*place
   //it int
 }
 
@@ -58,9 +59,15 @@ func (pn *PetriNet) Run() {
 
 func (pn *PetriNet) getTransitionOptions() []transition {
   var transitionOptions []transition
+  currMin := math.MaxInt64
   for _, currTransition := range pn.transitions {
     if (currTransition.canFire()) {
+      if (currTransition.priority < currMin) {
+        currMin = currTransition.priority
+        transitionOptions = []transition{*currTransition}
+      } else if (currTransition.priority == currMin) {
         transitionOptions = append(transitionOptions, *currTransition)
+      }
     }
   }
   return transitionOptions
@@ -103,7 +110,7 @@ func Init(_id int) PetriNet {
     id: _id,
     places: make(map[int]*place),
     transitions: make(map[int]*transition)}
-} 
+}
 
 func Test(){
   /*fpt := []Arc{Arc{p: 1, t: 1, w: 1}, Arc{p: 2, t: 2, w: 1}, Arc{p: 3, t: 2, w: 1}}
@@ -120,11 +127,11 @@ func Test(){
 
   p := Init(1)
   p.addPlace(1, 1, "")
-  p.addPlace(2, 0, "")
+  p.addPlace(2, 1, "")
   p.addPlace(3, 2, "")
   p.addPlace(4, 1, "")
   p.addTransition(1,1)
-  p.addTransition(2,1)
+  p.addTransition(2,0)
   p.addInArc(1,1,1)
   p.addInArc(2,2,1)
   p.addInArc(3,2,1)
