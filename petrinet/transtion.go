@@ -27,3 +27,15 @@ func (t *transition) fire() {
     currArc._place.marks += currArc.weight
   }
 }
+
+func (t *transition) addInArc(_arc arc) {
+	t.inArcs = append(t.inArcs, _arc)
+}
+
+func (t *transition) addOutArc(_arc arc) {
+	t.outArcs = append(t.outArcs, _arc)
+}
+
+func (t *transition) addInhibitorArc(_arc arc) {
+	t.inhibitorArcs = append(t.inhibitorArcs, _arc)
+}
