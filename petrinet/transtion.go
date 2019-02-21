@@ -3,9 +3,9 @@ package petrinet
 type transition struct {
 	id int
 	priority int
-	inArcs []Arc
-	outArcs []Arc
-	inhibitorArcs []Arc
+	inArcs []arc
+	outArcs []arc
+	inhibitorArcs []arc
 }
 
 func (t *transition) canFire() bool {
@@ -26,4 +26,16 @@ func (t *transition) fire() {
   for _, currArc := range t.outArcs {
     currArc._place.marks += currArc.weight
   }
+}
+
+func (t *transition) addInArc(_arc arc) {
+	t.inArcs = append(t.inArcs, _arc)
+}
+
+func (t *transition) addOutArc(_arc arc) {
+	t.outArcs = append(t.outArcs, _arc)
+}
+
+func (t *transition) addInhibitorArc(_arc arc) {
+	t.inhibitorArcs = append(t.inhibitorArcs, _arc)
 }
