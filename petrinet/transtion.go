@@ -11,10 +11,10 @@ type transition struct {
 func (t *transition) canFire() bool {
 	ans := true
   for _, currArc := range t.inArcs {
-		ans = ans && currArc._place.marks >= value.weight
+		ans = ans && currArc._place.marks >= currArc.weight
   }
   for _, value := range t.inhibitorArcs {
-    ans = ans && currArc._place.marks < value.weight
+    ans = ans && value._place.marks < value.weight
   }
   return ans
 }

@@ -34,7 +34,7 @@ import (
 
 type PetriNet struct {
  id int
- transitions map[int]transition
+ transitions map[int]*transition
  places map[int]*place 
   //it int
 }
@@ -60,18 +60,18 @@ func (pn *PetriNet) getTransitionOptions() []transition {
   var transitionOptions []transition
   for _, currTransition := range pn.transitions {
     if (currTransition.canFire()) {
-        transitionOptions = append(transitionOptions, currTransition)
+        transitionOptions = append(transitionOptions, *currTransition)
     }
   }
   return transitionOptions
 }
 
 func (pn *PetriNet) addPlace(_id, _marks int, _label string) {
-  pn.places[_id] = place{id: _id, marks: _marks, label: _label}
+  pn.places[_id] = &place{id: _id, marks: _marks, label: _label}
 }
 
 func (pn *PetriNet) addTransition(_id, _priority int) {
-  pn.transitions[_id] = transition {
+  pn.transitions[_id] = &transition {
     id: _id,
     priority: _priority,
     inArcs: make([]arc,0),
@@ -81,29 +81,28 @@ func (pn *PetriNet) addTransition(_id, _priority int) {
 func (pn *PetriNet) addInArc(from,_transition,_weight int){
   pn.transitions[_transition].addInArc(
     arc {
-      _place: &pn.places[from],
+      _place: pn.places[from],
       weight: _weight})
 }
 func (pn *PetriNet) addOutArc(_transition, to, _weight int){
-  pn.transitions[_transition].outArcs = append(
-    pn.transition[_transition].outArcs,
+
+  pn.transitions[_transition].addOutArc(
     arc {
-      _place: &pn.places[from],
+      _place: pn.places[to],
       weight: _weight})
 }
 func (pn *PetriNet) addInhibitorArc(from,_transition,_weight int){
-  pn.transitions[_transition].inhibitorArcs = append(
-    pn.transition[_transition].inhibitorArcs,
+  pn.transitions[_transition].addInhibitorArc(
     arc {
-      _place: &pn.places[from],
+      _place: pn.places[from],
       weight: _weight})
 }
 
 func Init(_id int) PetriNet {
   return PetriNet{
     id: _id,
-    places: make(map[int]place),
-    transitions: make(map[int]transition)}
+    places: make(map[int]*place),
+    transitions: make(map[int]*transition)}
 } 
 
 func Test(){
@@ -132,7 +131,8 @@ func Test(){
   p.addOutArc(1,2,1)
   p.addOutArc(1,3,1)
   p.addOutArc(2,4,1)
-  p.addInhibitorArc(4,2,1)
+  //p.addInhibitorArc(4,2,1)
+  fmt.Printf("%v\n", p)
   p.Run()
 }
 /*
