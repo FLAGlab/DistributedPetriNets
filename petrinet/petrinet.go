@@ -33,81 +33,81 @@ import (
 )
 
 type PetriNet struct {
-  p int
-  t int
-
-  tIn map[int][]Arc
-  tOut map[int][]Arc
-  inhibitors map[int][]Arc
-  m map[int]int
+ id int
+ transitions map[int]transition
+ places map[int]*place 
   //it int
 }
+
 func (pn PetriNet) String() string {
-	return fmt.Sprintf("{\n\tp: %v, \n\tt: %v, \n\ttIn: %v, \n\ttOut: %v, \n\tm: %v\n}", pn.p, pn.t, pn.tIn, pn.tOut, pn.m)
-}
-
-func InitPetriNet(p, t int, fpt, ftp, inhi []Arc, m0 map[int]int) PetriNet {
-  tIn  := make(map[int][]Arc)
-  tOut := make(map[int][]Arc)
-  inhibitors := make(map[int][]Arc)
-
-  for _, arc := range fpt {
-    tIn[arc.t] = append(tIn[arc.t], arc)
+  s := ""
+  for _, _place := range pn.places{
+    s = fmt.Sprintf("%v\n%v", s, _place)
   }
-  for _, arc := range ftp {
-    tOut[arc.t] = append(tOut[arc.t], arc)
-  }
-  for _, arc :=range inhi {
-    inhibitors[arc.t] = append(inhibitors[arc.t],arc)
-  }
-  return PetriNet{p, t, tIn, tOut, inhibitors, m0}
+  return s
 }
 
 func (pn *PetriNet) Run() {
   transitionOptions := pn.getTransitionOptions()
   for len(transitionOptions) > 0 {
-    pn.fire(transitionOptions[rand.Intn(len(transitionOptions))])
+    transitionOptions[rand.Intn(len(transitionOptions))].fire()
     fmt.Printf("%v\n", pn)
     transitionOptions = pn.getTransitionOptions()
   }
 }
 
-func (pn *PetriNet) getTransitionOptions() []int {
-  var transitionOptions []int
-  for i := 1; i <= pn.t; i++ {
-    if (pn.canTransition(i)) {
-        transitionOptions = append(transitionOptions, i)
+func (pn *PetriNet) getTransitionOptions() []transition {
+  var transitionOptions []transition
+  for _, currTransition := range pn.transitions {
+    if (currTransition.canFire()) {
+        transitionOptions = append(transitionOptions, currTransition)
     }
   }
   return transitionOptions
 }
 
-func (pn *PetriNet) canTransition(currT int) bool {
-  ans := true
-  inArcs := pn.tIn[currT]
-  for _, value := range inArcs {
-    ans = ans && pn.m[value.p] >= value.w
-  }
-  inhibArcs := pn.inhibitors[currT]
-  for _, value := range inhibArcs {
-    ans = ans && pn.m[value.p] < value.w
-  }
-  return ans
+func (pn *PetriNet) addPlace(_id, _marks int, _label string) {
+  pn.places[_id] = place{id: _id, marks: _marks, label: _label}
 }
 
-func (pn *PetriNet) fire(currT int) {
-  inArcs := pn.tIn[currT]
-  for _, value := range inArcs {
-    pn.m[value.p] -= value.w
-  }
-  outArcs := pn.tOut[currT]
-  for _, value := range outArcs {
-    pn.m[value.p] += value.w
-  }
+func (pn *PetriNet) addTransition(_id, _priority int) {
+  pn.transitions[_id] = transition {
+    id: _id,
+    priority: _priority,
+    inArcs: make([]arc,0),
+    outArcs: make([]arc,0),
+    inhibitorArcs: make([]arc,0)}
 }
+func (pn *PetriNet) addInArc(from,_transition,_weight int){
+  pn.transitions[_transition].addInArc(
+    arc {
+      _place: &pn.places[from],
+      weight: _weight})
+}
+func (pn *PetriNet) addOutArc(_transition, to, _weight int){
+  pn.transitions[_transition].outArcs = append(
+    pn.transition[_transition].outArcs,
+    arc {
+      _place: &pn.places[from],
+      weight: _weight})
+}
+func (pn *PetriNet) addInhibitorArc(from,_transition,_weight int){
+  pn.transitions[_transition].inhibitorArcs = append(
+    pn.transition[_transition].inhibitorArcs,
+    arc {
+      _place: &pn.places[from],
+      weight: _weight})
+}
+
+func Init(_id int) PetriNet {
+  return PetriNet{
+    id: _id,
+    places: make(map[int]place),
+    transitions: make(map[int]transition)}
+} 
 
 func Test(){
-  fpt := []Arc{Arc{p: 1, t: 1, w: 1}, Arc{p: 2, t: 2, w: 1}, Arc{p: 3, t: 2, w: 1}}
+  /*fpt := []Arc{Arc{p: 1, t: 1, w: 1}, Arc{p: 2, t: 2, w: 1}, Arc{p: 3, t: 2, w: 1}}
 	ftp := []Arc{Arc{t: 1, p: 2, w: 1}, Arc{t: 1, p: 3, w: 1}, Arc{t: 2, p: 4, w: 1}}
 	m := make(map[int]int)
 	inhi := []Arc{Arc{t: 2, p: 4, w:1}}
@@ -116,6 +116,23 @@ func Test(){
 	m[4] = 1
 	p := InitPetriNet(4, 2, fpt, ftp, inhi, m)
   fmt.Printf("%v", p)
+  p.Run()
+  */
+
+  p := Init(1)
+  p.addPlace(1, 1, "")
+  p.addPlace(2, 0, "")
+  p.addPlace(3, 2, "")
+  p.addPlace(4, 1, "")
+  p.addTransition(1,1)
+  p.addTransition(2,1)
+  p.addInArc(1,1,1)
+  p.addInArc(2,2,1)
+  p.addInArc(3,2,1)
+  p.addOutArc(1,2,1)
+  p.addOutArc(1,3,1)
+  p.addOutArc(2,4,1)
+  p.addInhibitorArc(4,2,1)
   p.Run()
 }
 /*

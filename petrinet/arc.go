@@ -4,11 +4,11 @@ import (
   "fmt"
 )
 
-type Arc struct {
-	p int
-	t int
-	w int
+type arc struct {
+	_place *place
+	weight int
 }
-func (a Arc) String() string {
-	return fmt.Sprintf("{p: %v, t: %v, w: %v}", a.p, a.t, a.w)
+
+func (a arc) String() string {
+	return fmt.Sprintf("{place: %v, weight: %v}", a._place, a.weight)
 }

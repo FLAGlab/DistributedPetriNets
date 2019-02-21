@@ -3,9 +3,9 @@ package petrinet
 type transition struct {
 	id int
 	priority int
-	inArcs []Arc
-	outArcs []Arc
-	inhibitorArcs []Arc
+	inArcs []arc
+	outArcs []arc
+	inhibitorArcs []arc
 }
 
 func (t *transition) canFire() bool {
