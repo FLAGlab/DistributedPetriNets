@@ -1,3 +1,17 @@
+// Copyright 2015 The etcd Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -7,7 +21,7 @@ import (
 	"log"
 	"sync"
 
-	"go.etcd.io/etcd/etcdserver/api/snap"
+	"github.com/coreos/etcd/snap"
 )
 
 // a key-value store backed by raft
@@ -34,8 +48,8 @@ func newKVStore(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <
 
 func (s *kvstore) Lookup(key string) (string, bool) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
 	v, ok := s.kvStore[key]
+	s.mu.RUnlock()
 	return v, ok
 }
 
@@ -56,7 +70,7 @@ func (s *kvstore) readCommits(commitC <-chan *string, errorC <-chan error) {
 			if err == snap.ErrNoSnapshot {
 				return
 			}
-			if err != nil {
+			if err != nil && err != snap.ErrNoSnapshot {
 				log.Panic(err)
 			}
 			log.Printf("loading snapshot at term %d and index %d", snapshot.Metadata.Term, snapshot.Metadata.Index)
@@ -81,8 +95,8 @@ func (s *kvstore) readCommits(commitC <-chan *string, errorC <-chan error) {
 }
 
 func (s *kvstore) getSnapshot() ([]byte, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return json.Marshal(s.kvStore)
 }
 
@@ -92,7 +106,7 @@ func (s *kvstore) recoverFromSnapshot(snapshot []byte) error {
 		return err
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.kvStore = store
+	s.mu.Unlock()
 	return nil
 }
