@@ -15,10 +15,10 @@
 package main
 
 import (
-	"flag"
-	"strings"
+	"flag"	// to read program args
+	"strings"  // to manipulate strings (.Split)
 
-	"github.com/coreos/etcd/raft/raftpb"
+	"github.com/coreos/etcd/raft/raftpb"  // to access ConfChange proto
 )
 
 func main() {

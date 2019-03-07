@@ -73,11 +73,11 @@ func (pn *PetriNet) GetTransitionOptions() []transition {
   return transitionOptions
 }
 
-func (pn *PetriNet) addPlace(_id, _marks int, _label string) {
+func (pn *PetriNet) AddPlace(_id, _marks int, _label string) {
   pn.places[_id] = &place{id: _id, marks: _marks, label: _label}
 }
 
-func (pn *PetriNet) addTransition(_id, _priority int) {
+func (pn *PetriNet) AddTransition(_id, _priority int) {
   pn.transitions[_id] = &transition {
     id: _id,
     priority: _priority,
@@ -85,20 +85,20 @@ func (pn *PetriNet) addTransition(_id, _priority int) {
     outArcs: make([]arc,0),
     inhibitorArcs: make([]arc,0)}
 }
-func (pn *PetriNet) addInArc(from,_transition,_weight int){
+func (pn *PetriNet) AddInArc(from,_transition,_weight int){
   pn.transitions[_transition].addInArc(
     arc {
       _place: pn.places[from],
       weight: _weight})
 }
-func (pn *PetriNet) addOutArc(_transition, to, _weight int){
+func (pn *PetriNet) AddOutArc(_transition, to, _weight int){
 
   pn.transitions[_transition].addOutArc(
     arc {
       _place: pn.places[to],
       weight: _weight})
 }
-func (pn *PetriNet) addInhibitorArc(from,_transition,_weight int){
+func (pn *PetriNet) AddInhibitorArc(from,_transition,_weight int){
   pn.transitions[_transition].addInhibitorArc(
     arc {
       _place: pn.places[from],
@@ -126,18 +126,18 @@ func Build() *PetriNet{
   */
 
   p := Init(1)
-  p.addPlace(1, 1, "")
-  p.addPlace(2, 1, "")
-  p.addPlace(3, 2, "")
-  p.addPlace(4, 1, "")
-  p.addTransition(1,1)
-  p.addTransition(2,0)
-  p.addInArc(1,1,1)
-  p.addInArc(2,2,1)
-  p.addInArc(3,2,1)
-  p.addOutArc(1,2,1)
-  p.addOutArc(1,3,1)
-  p.addOutArc(2,4,1)
+  p.AddPlace(1, 1, "")
+  p.AddPlace(2, 1, "")
+  p.AddPlace(3, 2, "")
+  p.AddPlace(4, 1, "")
+  p.AddTransition(1,1)
+  p.AddTransition(2,0)
+  p.AddInArc(1,1,1)
+  p.AddInArc(2,2,1)
+  p.AddInArc(3,2,1)
+  p.AddOutArc(1,2,1)
+  p.AddOutArc(1,3,1)
+  p.AddOutArc(2,4,1)
   //p.addInhibitorArc(4,2,1)
   //fmt.Printf("%v\n", p)
   return p
