@@ -15,13 +15,13 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
-	"encoding/json"
+	"bytes"  // to create bytes buffers for communication
+	"encoding/gob"	// to encode and decode structs into byte buffers
+	"encoding/json"  // to encode and decode jsons
 	"log"
-	"sync"
+	"sync"  // to use a reader/writer mutex
 
-	"github.com/coreos/etcd/snap"
+	"github.com/coreos/etcd/snap" // handles raft nodes states with snapshots
 )
 
 // a key-value store backed by raft
@@ -69,8 +69,7 @@ func (s *kvstore) readCommits(commitC <-chan *string, errorC <-chan error) {
 			snapshot, err := s.snapshotter.Load()
 			if err == snap.ErrNoSnapshot {
 				return
-			}
-			if err != nil && err != snap.ErrNoSnapshot {
+			} else if err != nil {
 				log.Panic(err)
 			}
 			log.Printf("loading snapshot at term %d and index %d", snapshot.Metadata.Term, snapshot.Metadata.Index)

@@ -1,24 +1,25 @@
 package main
 
 import (
-	"context"
+	"context" // required for server communication
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"strconv"
-	"time"
+	"net/http"  // to serve raft &http.Server
+	"net/url"   // to parse URL
+	"encoding/json"
+	"os"				// to mkdir
+	"strconv"   // string converter
+	"time"		  // for ticker
 
-	"github.com/coreos/etcd/etcdserver/stats"
-	"github.com/coreos/etcd/pkg/fileutil"
-	"github.com/coreos/etcd/pkg/types"
-	"github.com/coreos/etcd/raft"
-	"github.com/coreos/etcd/raft/raftpb"
-	"github.com/coreos/etcd/rafthttp"
-	"github.com/coreos/etcd/snap"
-	"github.com/coreos/etcd/wal"
-	"github.com/coreos/etcd/wal/walpb"
+	"github.com/coreos/etcd/etcdserver/stats" // for cluster statistics
+	"github.com/coreos/etcd/pkg/fileutil"		  // file utilities for files and paths
+	"github.com/coreos/etcd/pkg/types"			  // declare several data types and type checking functions
+	"github.com/coreos/etcd/raft"  // sends and recieves msgs in Protocol Buffer format
+	"github.com/coreos/etcd/raft/raftpb" // defines PB: Entry, Snapshot, etc
+	"github.com/coreos/etcd/rafthttp"  // http transportation layer for raft
+	"github.com/coreos/etcd/snap"		// handles raft nodes states with snapshots
+	"github.com/coreos/etcd/wal"  // write ahead log
+	"github.com/coreos/etcd/wal/walpb" // write ahead log proto buffers
 )
 
 // A key-value stream backed by raft
@@ -145,15 +146,26 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 			rc.confState = *rc.node.ApplyConfChange(cc)
 			switch cc.Type {
 			case raftpb.ConfChangeAddNode:
+				log.Println("Node added...")
 				if len(cc.Context) > 0 {
 					rc.transport.AddPeer(types.ID(cc.NodeID), []string{string(cc.Context)})
 				}
+				log.Println(rc.node.Status().SoftState)
 			case raftpb.ConfChangeRemoveNode:
 				if cc.NodeID == uint64(rc.id) {
 					log.Println("I've been removed from the cluster! Shutting down.")
+					log.Println(rc.node.Status().SoftState)
+					log.Println(rc.node.Status().SoftState.Lead)
+					log.Println("...")
+					log.Println("------------")
 					return false
 				}
 				rc.transport.RemovePeer(types.ID(cc.NodeID))
+			case raftpb.ConfChangeUpdateNode:
+				if cc.NodeID == uint64(rc.id) {
+					log.Println("I've been updated! Am I a leader?")
+					log.Println(rc.id)
+				}
 			}
 		}
 
@@ -183,7 +195,7 @@ func (rc *raftNode) loadSnapshot() *raftpb.Snapshot {
 // openWAL returns a WAL ready for reading.
 func (rc *raftNode) openWAL(snapshot *raftpb.Snapshot) *wal.WAL {
 	if !wal.Exist(rc.waldir) {
-		if err := os.Mkdir(rc.waldir, 0750); err != nil {
+		if err := os.Mkdir(rc.waldir, 0750); err != nil { // 0750 -> -rwxr-x---
 			log.Fatalf("raftexample: cannot create dir for wal (%v)", err)
 		}
 
@@ -243,7 +255,7 @@ func (rc *raftNode) writeError(err error) {
 
 func (rc *raftNode) startRaft() {
 	if !fileutil.Exist(rc.snapdir) {
-		if err := os.Mkdir(rc.snapdir, 0750); err != nil {
+		if err := os.Mkdir(rc.snapdir, 0750); err != nil { // 0750 -> -rwxr-x---
 			log.Fatalf("raftexample: cannot create dir for snapshot (%v)", err)
 		}
 	}
@@ -268,12 +280,20 @@ func (rc *raftNode) startRaft() {
 
 	if oldwal {
 		rc.node = raft.RestartNode(c)
+		log.Println("HERE")
+		log.Println("RC node: ")
+		temp, err := json.Marshal(rc.node)
+		log.Println(string(temp))
 	} else {
 		startPeers := rpeers
 		if rc.join {
 			startPeers = nil
 		}
 		rc.node = raft.StartNode(c, startPeers)
+		log.Println("HERE")
+		log.Println("RC node: ")
+		temp, err := json.Marshal(rc.node)
+		log.Println(string(temp))
 	}
 
 	rc.transport = &rafthttp.Transport{
@@ -281,7 +301,7 @@ func (rc *raftNode) startRaft() {
 		ClusterID:   0x1000,
 		Raft:        rc,
 		ServerStats: stats.NewServerStats("", ""),
-		LeaderStats: stats.NewLeaderStats(strconv.Itoa(rc.id)),
+		LeaderStats: stats.NewLeaderStats(strconv.Itoa(rc.id)), // Itoa -> int to string
 		ErrorC:      make(chan error),
 	}
 
@@ -335,7 +355,7 @@ func (rc *raftNode) maybeTriggerSnapshot() {
 		return
 	}
 
-	log.Printf("start snapshot [applied index: %d | last snapshot index: %d]", rc.appliedIndex, rc.snapshotIndex)
+	log.Printf("start snapshot [applied index: %d |p´09' last snapshot index: %d]", rc.appliedIndex, rc.snapshotIndex)
 	data, err := rc.getSnapshot()
 	if err != nil {
 		log.Panic(err)
@@ -371,7 +391,7 @@ func (rc *raftNode) serveChannels() {
 
 	defer rc.wal.Close()
 
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(100 * time.Millisecond) // channel that sends tick every 100 millis
 	defer ticker.Stop()
 
 	// send proposals over raft
