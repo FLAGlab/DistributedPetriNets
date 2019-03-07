@@ -86,20 +86,20 @@ func (pn *PetriNet) AddTransition(_id, _priority int) {
     inhibitorArcs: make([]arc,0)}
 }
 func (pn *PetriNet) AddInArc(from,_transition,_weight int){
-  pn.transitions[_transition].AddInArc(
+  pn.transitions[_transition].addInArc(
     arc {
       _place: pn.places[from],
       weight: _weight})
 }
 func (pn *PetriNet) AddOutArc(_transition, to, _weight int){
 
-  pn.transitions[_transition].AddOutArc(
+  pn.transitions[_transition].addOutArc(
     arc {
       _place: pn.places[to],
       weight: _weight})
 }
 func (pn *PetriNet) AddInhibitorArc(from,_transition,_weight int){
-  pn.transitions[_transition].AddInhibitorArc(
+  pn.transitions[_transition].addInhibitorArc(
     arc {
       _place: pn.places[from],
       weight: _weight})
