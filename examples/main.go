@@ -33,8 +33,8 @@ type petriNode struct {
 
 type petriMessage struct {
 	Command string
-	Address string 
-	Transtion int 
+	Address string
+	Transtion int
 }
 
 func (petriMessage) Read(reader payload.Reader) (noise.Message, error) {
@@ -42,7 +42,7 @@ func (petriMessage) Read(reader payload.Reader) (noise.Message, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read msg")
 	}
-	var m petriMessage 
+	var m petriMessage
 	dec := gob.NewDecoder(bytes.NewReader(byts))
 	if err := dec.Decode(&m); err != nil {
 		return nil, errors.Wrap(err, "failed to decode msg")
@@ -108,7 +108,7 @@ func setup(node *noise.Node, pn *petrinet.PetriNet, leader bool) {
 
 		go func() {
 			for {
-				
+
 				if leader {
 					ask(node)
 					transitions := wait(&opcodeChat,pn,node)
