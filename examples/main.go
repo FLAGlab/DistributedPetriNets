@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"os"
 	"strconv"
-	"strings"
 	"encoding/gob"
 	"bytes"
 	"github.com/FLAGlab/DCoPN/petrinet"
@@ -85,6 +84,7 @@ func ask(node *noise.Node) {
 
 func wait(opcode *noise.Opcode , pn *petrinet.PetriNet, node *noise.Node) []int {
 	peers := skademlia.Table(node).GetPeers()
+	log.Info().Msgf("llego aca en el wait")
 	log.Info().Msgf("peers: %v",peers)
 	return make([]int, 5)
 }
@@ -107,17 +107,25 @@ func setup(node *noise.Node, pn *petrinet.PetriNet, leader bool) {
 		})
 
 		go func() {
-			for {
+			for i:=0; i<5; i++ {
 
 				if leader {
 					ask(node)
 					transitions := wait(&opcodeChat,pn,node)
+					log.Info().Msgf("transitions: %v", transitions)
 					//selectAndFire(transitions,node)
 					log.Info().Msgf("a petri net: %v", pn)
-					msg := <-peer.Receive(opcodeChat)
+					//msg := <-peer.Receive(opcodeChat)
+					//log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
 				} else {
 					msg := <-peer.Receive(opcodeChat)
 					log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
+					peer, err := node.Dial(msg.(petriMessage).Address)
+					if err != nil {
+						panic(err)
+					}
+					peer.SendMessageAsync(petriMessage{Command: "transitions", Address: node.ExternalAddress()})
+
 						//recieve(msg,pn,node)
 				}
 				/*log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
@@ -178,8 +186,19 @@ func main() {
 		peers := skademlia.FindNode(node, protocol.NodeID(node).(skademlia.ID), skademlia.BucketSize(), 8)
 		log.Info().Msgf("Bootstrapped with peers: %+v", peers)
 	}
+	reader := bufio.NewReader(os.Stdin)
+	//if *leaderFlag {
 
-/*	reader := bufio.NewReader(os.Stdin)
+	//}
+	for {
+		txt, err := reader.ReadString('\n')
+		if err != nil {
+			panic(err)
+		}
+		log.Info().Msgf("read %v.", txt)
+
+	}
+/*
 
 	for {
 		txt, err := reader.ReadString('\n')
