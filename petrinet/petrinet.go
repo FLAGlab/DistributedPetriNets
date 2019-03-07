@@ -138,7 +138,7 @@ func Build() *PetriNet{
   p.AddOutArc(1,2,1)
   p.AddOutArc(1,3,1)
   p.AddOutArc(2,4,1)
-  //p.AddInhibitorArc(4,2,1)
+  //p.addInhibitorArc(4,2,1)
   //fmt.Printf("%v\n", p)
   return p
 }
