@@ -1,14 +1,15 @@
 package petrinet
 
-type transition struct {
-	id int
-	priority int
+// Transition of a PetriNet
+type Transition struct {
+	ID int
+	Priority int
 	inArcs []arc
 	outArcs []arc
 	inhibitorArcs []arc
 }
 
-func (t *transition) canFire() bool {
+func (t *Transition) canFire() bool {
 	ans := true
   for _, currArc := range t.inArcs {
 		ans = ans && currArc._place.marks >= currArc.weight
@@ -19,7 +20,7 @@ func (t *transition) canFire() bool {
   return ans
 }
 
-func (t *transition) fire() {
+func (t *Transition) fire() {
 	for _, currArc := range t.inArcs {
     currArc._place.marks -= currArc.weight
   }
@@ -28,14 +29,14 @@ func (t *transition) fire() {
   }
 }
 
-func (t *transition) addInArc(_arc arc) {
+func (t *Transition) addInArc(_arc arc) {
 	t.inArcs = append(t.inArcs, _arc)
 }
 
-func (t *transition) addOutArc(_arc arc) {
+func (t *Transition) addOutArc(_arc arc) {
 	t.outArcs = append(t.outArcs, _arc)
 }
 
-func (t *transition) addInhibitorArc(_arc arc) {
+func (t *Transition) addInhibitorArc(_arc arc) {
 	t.inhibitorArcs = append(t.inhibitorArcs, _arc)
 }

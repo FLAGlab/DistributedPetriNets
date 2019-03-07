@@ -2,7 +2,17 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/gob"
 	"flag"
+	"fmt"
+	// "math"
+	"os"
+	"strconv"
+	"sync"
+	"time"
+
+	"github.com/FLAGlab/DCoPN/petrinet"
 	"github.com/perlin-network/noise"
 	"github.com/perlin-network/noise/cipher/aead"
 	"github.com/perlin-network/noise/handshake/ecdh"
@@ -11,29 +21,54 @@ import (
 	"github.com/perlin-network/noise/protocol"
 	"github.com/perlin-network/noise/skademlia"
 	"github.com/pkg/errors"
-	"os"
-	"strconv"
-	"encoding/gob"
-	"bytes"
-	"github.com/FLAGlab/DCoPN/petrinet"
 )
 
-/** DEFINE MESSAGES **/
-var (
-	opcodeChat noise.Opcode
-	_          noise.Message = (*petriMessage)(nil)
+// CommandType enums for PetriNodes communication
+type CommandType string
+
+const (
+	// TransitionCommand to query transitions
+	TransitionCommand  CommandType = "transitions"
+	// FireCommand to activate a fire event on the PetriNet
+	FireCommand        CommandType = "fire"
+	// PrintCommand to print the current state of the PetriNet
+	PrintCommand       CommandType = "print"
 )
 
 type petriNode struct {
-	node noise.Node
-	petriNet petrinet.PetriNet
+	node *noise.Node
+	petriNet *petrinet.PetriNet
 	isLeader bool
+	transitionOptions map[string][]petrinet.Transition
+	mux sync.Mutex
+	step int
+	running bool
 }
 
 type petriMessage struct {
-	Command string
+	Command CommandType
 	Address string
-	Transtion int
+	Transitions []petrinet.Transition
+}
+
+func (pn *petriNode) incStep() {
+	pn.mux.Lock()
+	defer pn.mux.Unlock()
+	pn.step = (pn.step + 1) % 5
+}
+
+func (pn *petriNode) initTransitionOptions() {
+	pn.mux.Lock()
+	defer pn.mux.Unlock()
+	pn.transitionOptions = make(map[string][]petrinet.Transition)
+	pn.transitionOptions[pn.node.ExternalAddress()] = pn.petriNet.GetTransitionOptions()
+}
+
+func (pn *petriNode) addTransitionOption(key string, options []petrinet.Transition) int {
+	pn.mux.Lock()
+	defer pn.mux.Unlock()
+	pn.transitionOptions[key] = options
+	return len(pn.transitionOptions)
 }
 
 func (petriMessage) Read(reader payload.Reader) (noise.Message, error) {
@@ -55,15 +90,14 @@ func (m petriMessage) Write() []byte {
 	if err := gob.NewEncoder(&buf).Encode(m); err != nil {
 		log.Info().Msgf("Got a fucking error: %v", err)
 	}
-	// A probar
-	//return buf.Bytes()
 	return payload.NewWriter(nil).WriteBytes(buf.Bytes()).Bytes()
 }
+
 func buildPetriNet() *petrinet.PetriNet {
-	/*p := petrinet.Init(1)
-  	p.AddPlace(1, 1, "")
-  	p.AddPlace(2, 1, "")
-  	p.AddPlace(3, 2, "")
+	p := petrinet.Init(1)
+	p.AddPlace(1, 1, "")
+	p.AddPlace(2, 1, "")
+	p.AddPlace(3, 2, "")
 	p.AddPlace(4, 1, "")
 	p.AddTransition(1,1)
 	p.AddTransition(2,0)
@@ -74,72 +108,149 @@ func buildPetriNet() *petrinet.PetriNet {
 	p.AddOutArc(1,3,1)
 	p.AddOutArc(2,4,1)
   //p.AddInhibitorArc(4,2,1)
-	fmt.Printf("%v\n", p)*/
-	return petrinet.Build()
+	// fmt.Printf("%v\n", p)
+	return p
 }
 
-func ask(node *noise.Node) {
-	skademlia.BroadcastAsync(node, petriMessage{Command: "transitions", Address: node.ExternalAddress()})
+func (pn *petriNode) ask() {
+	node := pn.node
+	skademlia.BroadcastAsync(
+		node, petriMessage{Command: TransitionCommand, Address: node.ExternalAddress()})
 }
 
-func wait(opcode *noise.Opcode , pn *petrinet.PetriNet, node *noise.Node) []int {
-	peers := skademlia.Table(node).GetPeers()
-	log.Info().Msgf("llego aca en el wait")
-	log.Info().Msgf("peers: %v",peers)
-	return make([]int, 5)
-}
+// func (pn *petriNode) wait(opcode noise.Opcode) ([]petrinet.Transition, error) {
+// 	peers := skademlia.Table(pn.node).GetPeers()
+// 	transitionOptions := pn.petriNet.GetTransitionOptions()
+// 	currMin := math.MaxInt64
+// 	for _, peer := range peers {
+// 		msg := <-peer.Receive(opcode)
+// 		pMsg := msg.(petriMessage)
+// 		if pMsg.Command != TransitionCommand {
+// 			return nil, errors.New("Expected transition, received something else")
+// 		}
+// 		currTrans := pMsg.Transitions
+// 		log.Info().Msgf("Will process transitions " + strconv.Itoa(i))
+// 		if len(currTrans) > 0 && currTrans[0].Priority < currMin {
+// 			currMin = currTrans[0].Priority
+// 			transitionOptions = []petrinet.Transition{currTrans[0]}
+// 		} else if (currTrans[0].Priority == currMin) {
+// 			transitionOptions = append(transitionOptions, currTrans[0])
+// 		}
+// 	}
+// 	fmt.Printf("Done waiting, got options: %v\n", transitionOptions)
+// 	return transitionOptions, nil
+// }
 
 /** ENTRY POINT **/
-func setup(node *noise.Node, pn *petrinet.PetriNet, leader bool) {
-	opcodeChat = noise.RegisterMessage(noise.NextAvailableOpcode(), (*petriMessage)(nil))
-
+func setup(pn *petriNode) {
+	opcodeChat := noise.RegisterMessage(noise.NextAvailableOpcode(), (*petriMessage)(nil))
+	node := pn.node
 	node.OnPeerInit(func(node *noise.Node, peer *noise.Peer) error {
+		// init se llama cuando se conecta un nodo o se le hace dial
 		peer.OnConnError(func(node *noise.Node, peer *noise.Peer, err error) error {
 			log.Info().Msgf("Got an error: %v", err)
-
 			return nil
 		})
 
 		peer.OnDisconnect(func(node *noise.Node, peer *noise.Peer) error {
 			log.Info().Msgf("Peer %v has disconnected.", peer.RemoteIP().String()+":"+strconv.Itoa(int(peer.RemotePort())))
-
 			return nil
 		})
 
-		go func() {
-			for i:=0; i<5; i++ {
+		if pn.isLeader {
+			time.Sleep(10 * time.Second)
+		}
+		if !pn.running {
+			pn.running = true
+			// acá solo se comunica con el peer que se acaba de inicializar
+			go func() {
+				for i:=0; i<100; i++ {
+					fmt.Println("WILL PROCESS")
+					if pn.isLeader {
+						switch pn.step {
+						case 0:
+							fmt.Println("WILL ASK")
+							pn.ask()
+							pn.initTransitionOptions()
+							pn.incStep()
+						case 1:
+							fmt.Println("WILL WAIT")
+							msg := <-peer.Receive(opcodeChat)
+							pMsg := msg.(petriMessage)
+							fmt.Printf("Received msg %v\n", pMsg)
+							if pMsg.Command != TransitionCommand {
+								fmt.Println("Expected transition, received something else")
+								pn.step = 0
+							}
+							fmt.Printf("Received options %v\n", pMsg.Transitions)
+							numDone := pn.addTransitionOption(pMsg.Address, pMsg.Transitions)
+							expected := len(skademlia.Table(node).GetPeers())
+							fmt.Printf("Done with: %v Expected: %v\n", numDone, expected)
+							if numDone == expected {
+								pn.incStep()
+							}
+						case 3:
+							fmt.Println("WILL FIRE")
+							pn.incStep()
+						case 4:
+							fmt.Println("WILL PRINT")
+							pn.incStep()
+						}
 
-				if leader {
-					ask(node)
-					transitions := wait(&opcodeChat,pn,node)
-					log.Info().Msgf("transitions: %v", transitions)
-					//selectAndFire(transitions,node)
-					log.Info().Msgf("a petri net: %v", pn)
-					//msg := <-peer.Receive(opcodeChat)
-					//log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
-				} else {
-					msg := <-peer.Receive(opcodeChat)
-					log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
-					peer, err := node.Dial(msg.(petriMessage).Address)
-					if err != nil {
-						panic(err)
+						// fmt.Println("WILL WAIT")
+						// transitions, err := pn.wait(opcodeChat)
+						// if err != nil {
+						// 		log.Info().Msgf("error on transitions: %v", err)
+						// 		continue
+						// }
+						// log.Info().Msgf("transitions: %v", transitions)
+						// //selectAndFire(transitions,node)
+						// log.Info().Msgf("a petri net: %v", pn)
+						//msg := <-peer.Receive(opcodeChat)
+						//log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
+					} else {
+						fmt.Println("WAITING")
+						msg := <-peer.Receive(opcodeChat)
+						pMsg := msg.(petriMessage)
+						fmt.Printf("RECEIVED: %v\n", pMsg)
+						fmt.Println("Will dial...")
+						remotePeer, err := node.Dial(pMsg.Address) // hace que se llame otra vez init
+						if err != nil {
+							panic(err)
+						}
+						fmt.Printf("Dial ok, %v\n", remotePeer)
+						switch pMsg.Command {
+						case TransitionCommand:
+							fmt.Println("Type transition")
+							transitionOptions := pn.petriNet.GetTransitionOptions()
+							msgToSend := petriMessage{
+								Command: TransitionCommand,
+								Address: node.ExternalAddress(),
+								Transitions: transitionOptions}
+							fmt.Printf("will send %v\n", msgToSend)
+							remotePeer.SendMessageAsync(msgToSend)
+							fmt.Printf("sent transitions: %v\n", transitionOptions)
+						case FireCommand:
+							fmt.Println("fire")
+						case PrintCommand:
+							fmt.Println("print")
+						default:
+							fmt.Println("Unknown command")
+						}
 					}
-					peer.SendMessageAsync(petriMessage{Command: "transitions", Address: node.ExternalAddress()})
+					time.Sleep(5 * time.Second)
+					/*log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
+					if msg.(petriMessage).Transtion < 5 {
+						peer, err := node.Dial(msg.(petriMessage).Address)
+						if err != nil {
+							panic(err)
+						}
+						peer.SendMessageAsync(petriMessage{Command: "jajajja", Address: node.ExternalAddress(), Transtion: msg.(petriMessage).Transtion+1 })
+					}*/
 
-						//recieve(msg,pn,node)
 				}
-				/*log.Info().Msgf("[%s]: %s, %s", protocol.PeerID(peer), msg.(petriMessage).Command,msg.(petriMessage).Address)
-				if msg.(petriMessage).Transtion < 5 {
-					peer, err := node.Dial(msg.(petriMessage).Address)
-					if err != nil {
-						panic(err)
-					}
-					peer.SendMessageAsync(petriMessage{Command: "jajajja", Address: node.ExternalAddress(), Transtion: msg.(petriMessage).Transtion+1 })
-				}*/
-
-			}
-		}()
-
+			}()
+		}
 		return nil
 	})
 }
@@ -148,7 +259,7 @@ func main() {
 	//gob.Register(skademlia.ID{})
 	hostFlag := flag.String("h", "127.0.0.1", "host to listen for peers on")
 	portFlag := flag.Uint("p", 3000, "port to listen for peers on")
-	leaderFlag := flag.Bool("l",false,"is leader node")
+	leaderFlag := flag.Bool("l", false, "is leader node")
 	flag.Parse()
 
 	params := noise.DefaultParams()
@@ -163,12 +274,14 @@ func main() {
 	}
 	defer node.Kill()
 
+	pnNode := &petriNode{node: node, petriNet: buildPetriNet(), isLeader: *leaderFlag}
+
 	p := protocol.New()
 	p.Register(ecdh.New())
 	p.Register(aead.New())
 	p.Register(skademlia.New())
 	p.Enforce(node)
-	setup(node,buildPetriNet(),*leaderFlag)
+	setup(pnNode)
 	go node.Listen()
 
 	log.Info().Msgf("Listening for peers on port %d.", node.ExternalPort())

@@ -35,7 +35,7 @@ import (
 
 type PetriNet struct {
  id int
- transitions map[int]*transition
+ transitions map[int]*Transition
  places map[int]*place
   //it int
 }
@@ -57,15 +57,15 @@ func (pn *PetriNet) Run() {
   }
 }
 
-func (pn *PetriNet) GetTransitionOptions() []transition {
-  var transitionOptions []transition
+func (pn *PetriNet) GetTransitionOptions() []Transition {
+  var transitionOptions []Transition
   currMin := math.MaxInt64
   for _, currTransition := range pn.transitions {
     if (currTransition.canFire()) {
-      if (currTransition.priority < currMin) {
-        currMin = currTransition.priority
-        transitionOptions = []transition{*currTransition}
-      } else if (currTransition.priority == currMin) {
+      if (currTransition.Priority < currMin) {
+        currMin = currTransition.Priority
+        transitionOptions = []Transition{*currTransition}
+      } else if (currTransition.Priority == currMin) {
         transitionOptions = append(transitionOptions, *currTransition)
       }
     }
@@ -78,9 +78,9 @@ func (pn *PetriNet) AddPlace(_id, _marks int, _label string) {
 }
 
 func (pn *PetriNet) AddTransition(_id, _priority int) {
-  pn.transitions[_id] = &transition {
-    id: _id,
-    priority: _priority,
+  pn.transitions[_id] = &Transition {
+    ID: _id,
+    Priority: _priority,
     inArcs: make([]arc,0),
     outArcs: make([]arc,0),
     inhibitorArcs: make([]arc,0)}
@@ -109,7 +109,7 @@ func Init(_id int) *PetriNet {
   return &PetriNet{
     id: _id,
     places: make(map[int]*place),
-    transitions: make(map[int]*transition)}
+    transitions: make(map[int]*Transition)}
 }
 
 func Build() *PetriNet{
