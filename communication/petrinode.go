@@ -94,23 +94,9 @@ func (pn *petriNode) selectTransition() (*petrinet.Transition, string) {
 			initial++
 		}
 	}
-
-	// TODO: revisar bien la logica
-	myOptions := pn.transitionOptions[pn.node.ExternalAddress()]
-	add := 0
-	if len(myOptions) > 0 {
-		add = 1
-	}
-	if initial + add == 0 {
-		return nil, ""
-	}
-	pnNodeIndex := rand.Intn(initial + add)
-	chosenKey := pn.node.ExternalAddress()
+	pnNodeIndex := rand.Intn(initial)
+	chosenKey := indexToKey[pnNodeIndex]
 	options := pn.transitionOptions[chosenKey]
-	if pnNodeIndex < initial {
-		chosenKey = indexToKey[pnNodeIndex]
-		options = pn.transitionOptions[chosenKey]
-	}
 	transitionIndex := rand.Intn(len(options))
 	return options[transitionIndex], chosenKey
 }
@@ -168,8 +154,12 @@ func (pn *petriNode) broadcastWithTimeOut(msg petriMessage, successCallback, tim
 		errChan <- err
 	}()
 	select {
-	case <- errChan: // TODO check if err is nil
-		successCallback()
+	case errList := <- errChan:
+		if len(errList) > 0 {
+			timeoutCallback()
+		} else {
+			successCallback()
+		}
 	case <- time.After(time.Duration(pn.timeoutCount + humanTimeout) * time.Millisecond):
 		timeoutCallback()
 	}
@@ -202,6 +192,7 @@ func (pn *petriNode) run() {
 					pn.assembleElection()
 				}
 			}
+			time.Sleep(time.Duration(humanTimeout) * time.Millisecond)
 		}
 	}()
 }
@@ -249,30 +240,34 @@ func (pn *petriNode) processCandidate(pMsg petriMessage) {
 
 func (pn *petriNode) processFollower(pMsg petriMessage) {
 	fmt.Printf("Received msg: %v\n", pMsg)
-	switch pMsg.Command { // TODO si el term del msg es menor que el mio ignorarlo
-	case TransitionCommand:
-		transitionOptions := pn.petriNet.GetTransitionOptions()
-		msgToSend := pn.generateMessage(TransitionCommand)
-		msgToSend.Transitions = transitionOptions
-		pn.SendMessageByAddress(msgToSend, pMsg.Address)
-	case FireCommand:
-		transitionID := pMsg.Transitions[0].ID
-		fmt.Printf("WILL FIRE transition with id: %v\n", transitionID)
-		err := pn.petriNet.FireTransitionByID(transitionID)
-		if err != nil {
-			fmt.Println(err)
+	if pMsg.Term >= pn.currentTerm {
+		pn.currentTerm = pMsg.Term
+
+		switch pMsg.Command {
+		case TransitionCommand:
+			transitionOptions := pn.petriNet.GetTransitionOptions()
+			msgToSend := pn.generateMessage(TransitionCommand)
+			msgToSend.Transitions = transitionOptions
+			pn.SendMessageByAddress(msgToSend, pMsg.Address)
+		case FireCommand:
+			transitionID := pMsg.Transitions[0].ID
+			fmt.Printf("WILL FIRE transition with id: %v\n", transitionID)
+			err := pn.petriNet.FireTransitionByID(transitionID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		case PrintCommand:
+			fmt.Println("CURRENT PETRI NET:")
+			fmt.Printf("%v\n", pn.petriNet)
+		case RequestVoteCommand:
+			fmt.Println("WILL VOTE")
+			pn.vote(pMsg.Term, pMsg.Address)
+		default:
+			fmt.Printf("Unknown command: %v\n", pMsg.Command)
 		}
-	case PrintCommand:
-		fmt.Println("CURRENT PETRI NET:")
-		fmt.Printf("%v\n", pn.petriNet)
-	case RequestVoteCommand:
-		fmt.Println("WILL VOTE")
-		pn.vote(pMsg.Term, pMsg.Address)
-	default:
-		fmt.Printf("Unknown command: %v\n", pMsg.Command)
-	}
-	if pMsg.Command != RequestVoteCommand {
-		pn.votedFor = "" // theres a leader, I'll be ready for new elections TODO revisar
+		if pMsg.Command != RequestVoteCommand {
+			pn.votedFor = "" // theres a leader, I'll be ready for new elections TODO revisar
+		}
 	}
 }
 
@@ -308,8 +303,13 @@ func (pn *petriNode) processLeader() {
 			pn.resetStep() // ask again
 		}
 	case 2:
-		pn.fireTransition() // TODO: manejar error que retorna
-		pn.incStep()
+		err := pn.fireTransition()
+		if err != nil {
+			fmt.Println("Error trying to send fire")
+			pn.resetStep()
+		} else {
+			pn.incStep()
+		}
 	case 3:
 		pn.printPetriNet()
 		pn.incStep()
