@@ -94,6 +94,10 @@ func (pn *petriNode) selectTransition() (*petrinet.Transition, string) {
 			initial++
 		}
 	}
+
+	if initial == 0 { // there is no transition to pick
+		return nil, ""
+	}
 	pnNodeIndex := rand.Intn(initial)
 	chosenKey := indexToKey[pnNodeIndex]
 	options := pn.transitionOptions[chosenKey]
@@ -183,6 +187,7 @@ func (pn *petriNode) run() {
 					pn.assembleElection()
 				}
 			} else if pn.nodeType == Candidate {
+				// TODO si hay solo un nodo se queda trabado
 				select {
 				case pMsg := <- pn.pMsg:
 					pn.processCandidate(pMsg)
