@@ -1,7 +1,9 @@
 package main
 
 import (
-  "github.com/FLAGlab/DCoPN/petrinet"
+  "fmt"
+  "github.com/FLAGlab/DCoPN/petribuilder"
+  "github.com/FLAGlab/DCoPN/communication"
 )
 //type Arc petrinet.Arc
 func main() {
@@ -16,5 +18,8 @@ func main() {
 	//p := petrinet.InitPetriNet(4, 2, fpt, ftp, inhi, m)
 	//fmt.Printf("%v", p)
 	//p.Run()
-	petrinet.Test()
+	// petrinet.Test()
+  p := petribuilder.BuildPetriNet()
+  fmt.Printf("%v%n", p)
+  communication.Run()
 }

@@ -283,6 +283,7 @@ func (rc *raftNode) startRaft() {
 		log.Println("HERE")
 		log.Println("RC node: ")
 		temp, err := json.Marshal(rc.node)
+		log.Println(err)
 		log.Println(string(temp))
 	} else {
 		startPeers := rpeers
@@ -293,6 +294,7 @@ func (rc *raftNode) startRaft() {
 		log.Println("HERE")
 		log.Println("RC node: ")
 		temp, err := json.Marshal(rc.node)
+		log.Println(err)
 		log.Println(string(temp))
 	}
 

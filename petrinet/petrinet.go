@@ -1,4 +1,4 @@
-/*
+/*Package petrinet where:
 P => places
 T => transitions
 F subset of (P X T) U (T X P) => arcs
@@ -33,11 +33,11 @@ import (
   "math/rand"
 )
 
+// PetriNet struct, has an id, transitions and places
 type PetriNet struct {
  id int
  transitions map[int]*Transition
  places map[int]*place
-  //it int
 }
 
 func (pn PetriNet) String() string {
@@ -57,16 +57,23 @@ func (pn *PetriNet) Run() {
   }
 }
 
-func (pn *PetriNet) GetTransitionOptions() []Transition {
-  var transitionOptions []Transition
+// FireTransitionByID fires a transition given its ID
+func (pn *PetriNet) FireTransitionByID(transitionID int) error {
+  return pn.transitions[transitionID].fire()
+}
+
+// GetTransitionOptions gets all the transitions with min priority that can be
+// fired
+func (pn *PetriNet) GetTransitionOptions() []*Transition {
+  var transitionOptions []*Transition
   currMin := math.MaxInt64
   for _, currTransition := range pn.transitions {
     if (currTransition.canFire()) {
       if (currTransition.Priority < currMin) {
         currMin = currTransition.Priority
-        transitionOptions = []Transition{*currTransition}
+        transitionOptions = []*Transition{currTransition}
       } else if (currTransition.Priority == currMin) {
-        transitionOptions = append(transitionOptions, *currTransition)
+        transitionOptions = append(transitionOptions, currTransition)
       }
     }
   }

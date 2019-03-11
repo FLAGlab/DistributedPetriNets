@@ -1,3 +1,4 @@
 # Use goreman to run `go get github.com/mattn/goreman`
-example1: examples -p 3000
-example2: examples -p 3001 -l 127.0.0.1:3000
+example3: communication -p 3003
+example2: communication -p 3002 127.0.0.1:3003
+example1: communication -p 3001 -l 127.0.0.1:3002

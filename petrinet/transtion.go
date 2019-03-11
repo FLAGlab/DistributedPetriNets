@@ -1,5 +1,9 @@
 package petrinet
 
+import (
+	"errors"
+)
+
 // Transition of a PetriNet
 type Transition struct {
 	ID int
@@ -20,13 +24,17 @@ func (t *Transition) canFire() bool {
   return ans
 }
 
-func (t *Transition) fire() {
+func (t *Transition) fire() error {
+	if !t.canFire() {
+		return errors.New("Trying to fire transition that can't be fired")
+	}
 	for _, currArc := range t.inArcs {
     currArc._place.marks -= currArc.weight
   }
   for _, currArc := range t.outArcs {
     currArc._place.marks += currArc.weight
   }
+	return nil
 }
 
 func (t *Transition) addInArc(_arc arc) {
