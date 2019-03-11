@@ -2,9 +2,9 @@ package communication
 
 import (
 	"flag"
-	"fmt"
 	"strconv"
 	"time"
+	"math/rand"
 
 	"github.com/FLAGlab/DCoPN/petribuilder"
 	"github.com/perlin-network/noise"
@@ -32,46 +32,13 @@ func setup(pn *petriNode) {
 			return nil
 		})
 
-		if pn.isLeader {
-			time.Sleep(2 * time.Second)
+		if pn.nodeType == Leader {
+			time.Sleep(500 * time.Millisecond)
 		}
 		// acá solo se comunica con el peer que se acaba de inicializar
 		go func() {
 			for {
-				fmt.Println("WILL PROCESS")
-				if pn.isLeader {
-					fmt.Println("LISTENING TO MESSAGES AS LEADER")
-			    pn.pMsg <- (<-peer.Receive(opcodeChat)).(petriMessage)
-				} else {
-					fmt.Println("LISTENING TO MESSAGES AS FOLLOWER")
-					pMsg := (<-peer.Receive(opcodeChat)).(petriMessage)
-					fmt.Printf("RECEIVED: %v\n", pMsg)
-					switch pMsg.Command {
-					case TransitionCommand:
-						fmt.Println("Type transition")
-						transitionOptions := pn.petriNet.GetTransitionOptions()
-						msgToSend := petriMessage{
-							Command: TransitionCommand,
-							Address: pn.node.ExternalAddress(),
-							Transitions: transitionOptions}
-						fmt.Printf("will send %v\n", msgToSend)
-						peer.SendMessage(msgToSend)
-						fmt.Printf("sent transitions: %v\n", transitionOptions)
-					case FireCommand:
-						transitionID := pMsg.Transitions[0].ID
-						fmt.Printf("WILL FIRE transition with id: %v\n", transitionID)
-						err := pn.petriNet.FireTransitionByID(transitionID)
-						if err != nil {
-							fmt.Println(err)
-						}
-					case PrintCommand:
-						fmt.Println("WILL PRINT CURRENT PETRI NET")
-						fmt.Printf("%v\n", pn.petriNet)
-					default:
-						fmt.Println("Unknown command")
-					}
-				}
-				time.Sleep(2 * time.Second)
+				pn.pMsg <- (<-peer.Receive(opcodeChat)).(petriMessage)
 			}
 		}()
 		return nil
@@ -80,6 +47,7 @@ func setup(pn *petriNode) {
 
 // Run function that starts everything
 func Run() {
+	rand.Seed(time.Now().UnixNano())
 	//gob.Register(skademlia.ID{})
 	hostFlag := flag.String("h", "127.0.0.1", "host to listen for peers on")
 	portFlag := flag.Uint("p", 3000, "port to listen for peers on")
@@ -104,11 +72,9 @@ func Run() {
 	p.Register(aead.New())
 	p.Register(skademlia.New())
 	p.Enforce(node)
-	if *leaderFlag {
-		pnNode.initLeader()
-		pnNode.runLeader()
-		defer pnNode.closeLeader()
-	}
+	pnNode.init(*leaderFlag)
+	pnNode.run()
+	defer pnNode.close()
 	setup(pnNode)
 	go node.Listen()
 

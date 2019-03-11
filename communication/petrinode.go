@@ -12,55 +12,66 @@ import (
 	"github.com/perlin-network/noise/skademlia"
 )
 
+// MinTimeout the minimum timeout for raft
+const MinTimeout = 1000 // milliseconds
+// MaxTimeout the max timeout for raft
+const MaxTimeout = 5000 // milliseconds
+// LeaderTimeout to wait for ask response
+const LeaderTimeout = 500 // milliseconds
+const humanTimeout = 5000
+
+// NodeType enums for PetriNodes communication
+type NodeType string
+
+const (
+	// Leader is leader node
+	Leader    NodeType = "leader"
+	// Follower is follower node
+	Follower  NodeType = "follower"
+	// Candidate is candidate node
+	Candidate NodeType = "candidate"
+)
+
 type petriNode struct {
 	node *noise.Node
 	petriNet *petrinet.PetriNet
-	isLeader bool
+	nodeType NodeType
 	transitionOptions map[string][]*petrinet.Transition
-	peerCache map[string]*noise.Peer
 	mux sync.Mutex
 	step int
+	currentTerm int
+	timeoutCount int
 	pMsg chan petriMessage
+	myVotes map[string]string
+	votedFor string
 }
 
 func (pn *petriNode) incStep() {
-	pn.mux.Lock()
-	defer pn.mux.Unlock()
 	pn.step = (pn.step + 1) % 4
 }
 
 func (pn *petriNode) resetStep() {
-	pn.mux.Lock()
-	defer pn.mux.Unlock()
 	pn.step = 0
 }
 
 func (pn *petriNode) initTransitionOptions() {
-	pn.mux.Lock()
-	defer pn.mux.Unlock()
 	pn.transitionOptions = make(map[string][]*petrinet.Transition)
 	pn.transitionOptions[pn.node.ExternalAddress()] = pn.petriNet.GetTransitionOptions()
-	pn.peerCache = make(map[string]*noise.Peer)
 }
 
 func (pn *petriNode) addTransitionOption(key string, options []*petrinet.Transition) int {
-	pn.mux.Lock()
-	defer pn.mux.Unlock()
 	pn.transitionOptions[key] = options
 	return len(pn.transitionOptions)
 }
 
 func (pn *petriNode) getTransition(pMsg petriMessage) {
-	fmt.Printf("Received msg %v\n", pMsg)
 	if pMsg.Command != TransitionCommand {
 		fmt.Println("Expected transition, received something else")
 		pn.resetStep()
 		return
 	}
-	fmt.Printf("Received options %v\n", pMsg.Transitions)
 	numDone := pn.addTransitionOption(pMsg.Address, pMsg.Transitions)
 	expected := len(skademlia.Table(pn.node).GetPeers()) + 1 // plus me
-	fmt.Printf("Done with: %v, Expected: %v\n", numDone, expected)
 	if numDone == expected {
 		pn.incStep()
 	}
@@ -84,6 +95,7 @@ func (pn *petriNode) selectTransition() (*petrinet.Transition, string) {
 		}
 	}
 
+	// TODO: revisar bien la logica
 	myOptions := pn.transitionOptions[pn.node.ExternalAddress()]
 	add := 0
 	if len(myOptions) > 0 {
@@ -109,102 +121,239 @@ func (pn *petriNode) fireTransition() error {
 		fmt.Println("NO TRANSITION TO SELECT")
 		return nil
 	}
-	fmt.Printf("SELECTED TRANSITION: %v\n", transition)
-	fmt.Printf("Of peer: %v\n", peerAddr)
-	msgToSend := petriMessage{
-		Command: FireCommand,
-		Address: pn.node.ExternalAddress(),
-		Transitions: []*petrinet.Transition{transition}}
+	// fmt.Printf("SELECTED TRANSITION: %v\n", transition)
+	// fmt.Printf("Of peer: %v\n", peerAddr)
+	msgToSend := pn.generateMessage(FireCommand)
+	msgToSend.Transitions = []*petrinet.Transition{transition}
 	if peerAddr == pn.node.ExternalAddress() {
 		pn.petriNet.FireTransitionByID(transition.ID)
 		return nil
 	}
-	fmt.Printf("TRANSITION IS REMOTE: %v\n", pn.peerCache[peerAddr])
-	if peerAddr != "" && pn.peerCache[peerAddr] != nil {
-		err := pn.peerCache[peerAddr].SendMessage(msgToSend)
-		fmt.Printf("Error sending message from cache peer: %v\n", err)
-		if err == nil {
-				return err // everything ok
-		} // else will try to dial
-	}
-	fmt.Println("WILL DIAL")
+	// fmt.Printf("TRANSITION IS REMOTE: %v\n", peerAddr)
+	return pn.SendMessageByAddress(msgToSend, peerAddr)
+}
+
+func (pn *petriNode) SendMessageByAddress(msgToSend petriMessage, peerAddr string) error {
 	peer, err := pn.node.Dial(peerAddr)
-	fmt.Println("DONE DIAL")
 	if err != nil {
 		fmt.Printf("Error dialing: %v\n", peerAddr)
 		return err
 	}
-	pn.peerCache[peerAddr] = peer
-	return pn.peerCache[peerAddr].SendMessage(msgToSend)
+	return peer.SendMessage(msgToSend)
 }
 
 func (pn *petriNode) printPetriNet() {
 	fmt.Printf("%v\n", pn.petriNet)
-	skademlia.Broadcast(pn.node, petriMessage{Command: PrintCommand, Address: pn.node.ExternalAddress()})
+	skademlia.Broadcast(pn.node, pn.generateMessage(PrintCommand))
 }
 
-func (pn *petriNode) runLeader() {
+func (pn *petriNode) assembleElection() {
+	pn.setNodeType(Candidate)
+	pn.myVotes[pn.node.ExternalAddress()] = pn.node.ExternalAddress()
+	pn.currentTerm++
+	pn.votedFor = pn.node.ExternalAddress()
+	timeoutCallback := func () {
+		pn.setNodeType(Candidate)
+	}
+	pn.broadcastWithTimeOut(pn.generateMessage(RequestVoteCommand), func(){}, timeoutCallback)
+}
+
+func (pn *petriNode) broadcastWithTimeOut(msg petriMessage, successCallback, timeoutCallback func()) {
+	errChan := make(chan []error)
+	defer close(errChan)
 	go func() {
+		err := skademlia.Broadcast(
+			pn.node,
+			msg)
+		errChan <- err
+	}()
+	select {
+	case <- errChan: // TODO check if err is nil
+		successCallback()
+	case <- time.After(time.Duration(pn.timeoutCount + humanTimeout) * time.Millisecond):
+		timeoutCallback()
+	}
+}
+
+func (pn *petriNode) run() {
+	go func() {
+		time.Sleep(time.Duration(humanTimeout) * time.Millisecond)
 		for  {
-			switch pn.step {
-			case 0:
-				pn.ask()
-			case 1:
-				fmt.Println("WILL GET TRANSITION")
+			fmt.Printf("LISTENING TO MESSAGES AS %v\n", pn.nodeType)
+			fmt.Printf("Will wait for %v millis\n", pn.timeoutCount + humanTimeout)
+			if pn.nodeType == Leader {
+				pn.processLeader()
+			} else if pn.nodeType == Follower {
 				select {
-				case msg := <- pn.pMsg:
-					pn.getTransition(msg)
-				case <-time.After(5 * time.Second):
-					pn.resetStep() // ask again
+				case pMsg := <- pn.pMsg:
+					pn.processFollower(pMsg)
+				case <- time.After(time.Duration(pn.timeoutCount + humanTimeout) * time.Millisecond):
+					// anarchy!!
+					fmt.Println("Will do election")
+					pn.assembleElection()
 				}
-			case 2:
-				fmt.Println("WILL FIRE")
-				pn.fireTransition()
-				pn.incStep()
-			case 3:
-				fmt.Println("WILL PRINT")
-				pn.printPetriNet()
-				pn.incStep()
-			default:
-				time.Sleep(5 * time.Second)
+			} else if pn.nodeType == Candidate {
+				select {
+				case pMsg := <- pn.pMsg:
+					pn.processCandidate(pMsg)
+				case <- time.After(time.Duration(pn.timeoutCount + humanTimeout) * time.Millisecond):
+					// vote time is over... lets try again
+					pn.setNodeType(Candidate) // to reset vote counts
+					pn.assembleElection()
+				}
 			}
 		}
 	}()
 }
 
-func (pn *petriNode) initLeader() {
-	pn.mux.Lock()
-	defer pn.mux.Unlock()
-	pn.isLeader = true
+func (pn *petriNode) processCandidate(pMsg petriMessage) {
+	fmt.Printf("Processing msg as candidate: %v", pMsg)
+	if pMsg.FromType == Leader || pMsg.Term > pn.currentTerm{
+		// theres a leader !!
+		pn.setNodeType(Follower)
+		if pMsg.Command != VoteCommand { // in case it is not a leader
+			pn.processFollower(pMsg)
+		}
+	} else if pMsg.Command == RequestVoteCommand { // someone else wants me to vote
+		fmt.Println("someone else wants my vote D:")
+		pn.vote(pMsg.Term, pMsg.Address)
+	} else { // its a vote
+		fmt.Printf("Received %v vote from: %v\n", pMsg.VoteGranted, pMsg.Address)
+
+		pn.myVotes[pMsg.Address] = pMsg.VoteGranted
+		total := len(skademlia.Table(pn.node).GetPeers()) + 1 // plus me
+		fmt.Printf("Total of votes: %v\n", pn.myVotes)
+		fmt.Printf("Total of peers: %v\n", total)
+		if len(pn.myVotes) == total { // polls are closed!
+			fmt.Println("POLLS ARE CLOSED!!!")
+			countMap := make(map[string]int)
+			maxVotes := 0
+			maxVoteAddress := ""
+			for _, voteAddr := range pn.myVotes {
+				countMap[voteAddr]++
+				if countMap[voteAddr] > maxVotes {
+					maxVotes = countMap[voteAddr]
+					maxVoteAddress = voteAddr
+				}
+			}
+			fmt.Printf("WINNER: %v, COUNT: %v\n", maxVoteAddress, maxVotes)
+			if maxVoteAddress == pn.node.ExternalAddress() { // I won!!
+				fmt.Println("LEADER SETTED AS ME !!! >:v")
+				pn.setNodeType(Leader)
+			} else {
+				pn.setNodeType(Follower)
+			}
+		}
+	}
+}
+
+func (pn *petriNode) processFollower(pMsg petriMessage) {
+	fmt.Printf("Received msg: %v\n", pMsg)
+	switch pMsg.Command { // TODO si el term del msg es menor que el mio ignorarlo
+	case TransitionCommand:
+		transitionOptions := pn.petriNet.GetTransitionOptions()
+		msgToSend := pn.generateMessage(TransitionCommand)
+		msgToSend.Transitions = transitionOptions
+		pn.SendMessageByAddress(msgToSend, pMsg.Address)
+	case FireCommand:
+		transitionID := pMsg.Transitions[0].ID
+		fmt.Printf("WILL FIRE transition with id: %v\n", transitionID)
+		err := pn.petriNet.FireTransitionByID(transitionID)
+		if err != nil {
+			fmt.Println(err)
+		}
+	case PrintCommand:
+		fmt.Println("CURRENT PETRI NET:")
+		fmt.Printf("%v\n", pn.petriNet)
+	case RequestVoteCommand:
+		fmt.Println("WILL VOTE")
+		pn.vote(pMsg.Term, pMsg.Address)
+	default:
+		fmt.Printf("Unknown command: %v\n", pMsg.Command)
+	}
+	if pMsg.Command != RequestVoteCommand {
+		pn.votedFor = "" // theres a leader, I'll be ready for new elections TODO revisar
+	}
+}
+
+func (pn *petriNode) vote(term int, address string) {
+	ans := pn.generateMessage(VoteCommand)
+	fmt.Println("WILL VOTE")
+	fmt.Printf("my term: %v, msg term: %v, my last vote for: %v\n", pn.currentTerm, term, pn.votedFor)
+	if pn.currentTerm < term && (pn.votedFor == "" || pn.votedFor == address) {
+		ans.VoteGranted =  address
+		pn.currentTerm = term
+		pn.votedFor = address
+	} else {
+		ans.VoteGranted = pn.votedFor
+	}
+	fmt.Printf("My vote: %v\n", ans.VoteGranted)
+	pn.SendMessageByAddress(ans, address)
+}
+
+func (pn *petriNode) processLeader() {
+	// print and ask work like heartbeats
+	switch pn.step {
+	case 0:
+		pn.ask()
+	case 1:
+		select {
+		case msg := <- pn.pMsg:
+			if (msg.Command == RequestVoteCommand || msg.FromType == Leader) && msg.Term > pn.currentTerm {
+				pn.setNodeType(Follower)
+			} else {
+				pn.getTransition(msg)
+			}
+		case <-time.After(time.Duration(pn.timeoutCount + humanTimeout) * time.Millisecond):
+			pn.resetStep() // ask again
+		}
+	case 2:
+		pn.fireTransition() // TODO: manejar error que retorna
+		pn.incStep()
+	case 3:
+		pn.printPetriNet()
+		pn.incStep()
+	}
+}
+
+func (pn *petriNode) setNodeType(nodeType NodeType) {
+	pn.nodeType = nodeType
+	currTimeout := LeaderTimeout
+	if nodeType != Leader {
+		currTimeout = MinTimeout + rand.Intn(MaxTimeout - MinTimeout)
+	}
+	pn.myVotes = make(map[string]string)
+	pn.timeoutCount = currTimeout
+}
+
+func (pn *petriNode) init(isLeader bool) {
+	if isLeader {
+		pn.setNodeType(Leader)
+	} else {
+		pn.setNodeType(Follower)
+	}
 	pn.pMsg = make(chan petriMessage)
 }
 
-func (pn *petriNode) closeLeader() {
-	pn.mux.Lock()
-	defer pn.mux.Unlock()
-	pn.isLeader = false
+func (pn *petriNode) close() {
 	close(pn.pMsg)
 }
 
+func (pn *petriNode) generateMessage(command CommandType) petriMessage {
+	return petriMessage {
+		Command: command,
+		Address: pn.node.ExternalAddress(),
+		Term: pn.currentTerm,
+		FromType: pn.nodeType}
+}
 
 func (pn *petriNode) ask() {
-	node := pn.node
-	fmt.Println("Will Broadcast")
-	errChan := make(chan []error)
-	defer close(errChan)
-	go func() {
-		err := skademlia.Broadcast(node, petriMessage{Command: TransitionCommand, Address: node.ExternalAddress()})
-		errChan <- err
-	}()
-	select {
-	case err := <- errChan:
-		fmt.Printf("Broadcast error: %v\n", err)
-		fmt.Println("Done Broadcast")
+	success := func() {
 		pn.initTransitionOptions()
 		pn.incStep()
-	case <-time.After(5 * time.Second):
-		fmt.Println("Not even if I shout :'v ...")
+	}
+	timeoutCallback := func() {
 		pn.resetStep()
 	}
-
+	pn.broadcastWithTimeOut(pn.generateMessage(TransitionCommand), success, timeoutCallback)
 }

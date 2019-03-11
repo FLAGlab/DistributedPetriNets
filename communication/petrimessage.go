@@ -21,11 +21,18 @@ const (
 	FireCommand        CommandType = "fire"
 	// PrintCommand to print the current state of the PetriNet
 	PrintCommand       CommandType = "print"
+	// VoteCommand to vote for a leader node
+	VoteCommand        CommandType = "vote"
+	// RequestVoteCommand to request votes for a leader node
+	RequestVoteCommand CommandType = "requestvote"
 )
 
 type petriMessage struct {
 	Command CommandType
 	Address string
+	Term int
+	FromType NodeType
+	VoteGranted string
 	Transitions []*petrinet.Transition
 }
 
