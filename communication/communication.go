@@ -1,6 +1,7 @@
 package communication
 
 import (
+	"fmt"
 	"flag"
 	"strconv"
 	"time"
@@ -15,12 +16,22 @@ import (
 	"github.com/perlin-network/noise/skademlia"
 )
 
+var r = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+//Generates random int as function of range
+func getRand(Range int) int {
+    return r.Intn(Range)
+}
 
 /** ENTRY POINT **/
-func setup(pn *petriNode) {
+func setup(rn *RaftNode) {
 	opcodeChat := noise.RegisterMessage(noise.NextAvailableOpcode(), (*petriMessage)(nil))
-	pn.node.OnPeerInit(func(node *noise.Node, peer *noise.Peer) error {
+	channelCount := 0
+	rn.pNode.node.OnPeerInit(func(node *noise.Node, peer *noise.Peer) error {
 		// init se llama cuando se conecta un nodo o se le hace dial
+		channelCount++
+		myChannel := channelCount
+		fmt.Printf("Created channel %v\n", channelCount)
 		peer.OnConnError(func(node *noise.Node, peer *noise.Peer, err error) error {
 			log.Info().Msgf("Got an error: %v", err)
 			return nil
@@ -31,15 +42,13 @@ func setup(pn *petriNode) {
 				peer.RemoteIP().String()+":"+strconv.Itoa(int(peer.RemotePort())))
 			return nil
 		})
-
-		if pn.nodeType == Leader {
-			time.Sleep(500 * time.Millisecond)
-		}
 		// acá solo se comunica con el peer que se acaba de inicializar
 		go func() {
-			for {
-				pn.pMsg <- (<-peer.Receive(opcodeChat)).(petriMessage)
+			for msg := range peer.Receive(opcodeChat) {
+				rn.pMsg <- msg.(petriMessage)
+				fmt.Printf("HERE: Used channel %v\n", myChannel)
 			}
+			fmt.Printf("HERE: Closed channel %v\n", myChannel)
 		}()
 		return nil
 	})
@@ -47,7 +56,6 @@ func setup(pn *petriNode) {
 
 // Run function that starts everything
 func Run() {
-	rand.Seed(time.Now().UnixNano())
 	//gob.Register(skademlia.ID{})
 	hostFlag := flag.String("h", "127.0.0.1", "host to listen for peers on")
 	portFlag := flag.Uint("p", 3000, "port to listen for peers on")
@@ -66,16 +74,16 @@ func Run() {
 	}
 	defer node.Kill()
 
-	pnNode := &petriNode{node: node, petriNet: petribuilder.BuildPetriNet()}
 	p := protocol.New()
 	p.Register(ecdh.New())
 	p.Register(aead.New())
 	p.Register(skademlia.New())
 	p.Enforce(node)
-	pnNode.init(*leaderFlag)
-	pnNode.run()
-	defer pnNode.close()
-	setup(pnNode)
+	pnNode := &petriNode{node: node, petriNet: petribuilder.BuildPetriNet()}
+	rn := InitRaftNode(pnNode, *leaderFlag)
+	defer rn.close()
+	go rn.Listen()
+	setup(rn)
 	go node.Listen()
 
 	log.Info().Msgf("Listening for peers on port %d.", node.ExternalPort())

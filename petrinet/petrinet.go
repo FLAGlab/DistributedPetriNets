@@ -45,7 +45,7 @@ func (pn PetriNet) String() string {
   for _, _place := range pn.places{
     s = fmt.Sprintf("%v\n%v", s, _place)
   }
-  return s
+  return s + "\n"
 }
 
 func (pn *PetriNet) Run() {

@@ -1,0 +1,211 @@
+_WAITING AS follower
+_TIMEOUT
+_TYPE candidate
+_WAITING AS candidate
+_RECEIVED: {transitions 127.0.0.1:3001 0 leader  []}
+_WAITING AS candidate
+_RECEIVED: {vote 127.0.0.1:3001 1 follower 127.0.0.1:3002 []}
+_TYPE leader
+_ASK
+_WAITING AS leader
+_RECEIVED: {requestvote 127.0.0.1:3001 2 candidate  []}
+_TYPE follower
+_WAITING AS follower
+_TIMEOUT
+_TYPE candidate
+_WAITING AS candidate
+_RECEIVED: {transitions 127.0.0.1:3001 2 leader  []}
+_WAITING AS candidate
+_RECEIVED: {vote 127.0.0.1:3001 3 follower 127.0.0.1:3001 []}
+_TYPE leader
+_ASK
+_WAITING AS leader
+_RECEIVED: {requestvote 127.0.0.1:3001 4 candidate  []}
+_TYPE follower
+_WAITING AS follower
+_TIMEOUT
+_TYPE candidate
+_WAITING AS candidate
+_RECEIVED: {transitions 127.0.0.1:3001 4 leader  []}
+_WAITING AS candidate
+_RECEIVED: {vote 127.0.0.1:3001 5 follower 127.0.0.1:3001 []}
+_TYPE leader
+_ASK
+_WAITING AS leader
+_RECEIVED: {requestvote 127.0.0.1:3001 6 candidate  []}
+_TYPE follower
+_WAITING AS follower
+_TIMEOUT
+_TYPE candidate
+_WAITING AS candidate
+_RECEIVED: {transitions 127.0.0.1:3001 6 leader  []}
+_WAITING AS candidate
+_RECEIVED: {vote 127.0.0.1:3001 7 follower 127.0.0.1:3001 []}
+_TYPE leader
+_ASK
+_WAITING AS leader
+_RECEIVED: {requestvote 127.0.0.1:3001 8 candidate  []}
+_TYPE follower
+_WAITING AS follower
+_TIMEOUT
+_TYPE candidate
+_WAITING AS candidate
+_RECEIVED: {transitions 127.0.0.1:3001 8 leader  []}
+_WAITING AS candidate
+_RECEIVED: {vote 127.0.0.1:3001 9 follower 127.0.0.1:3001 []}
+_TYPE leader
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  [0xc0002f85a0 0xc0002f8600]}
+_FIRE
+_WILL FIRE TRANSITION 1
+_PRINT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  [0xc0002f8ea0 0xc0002f8f00]}
+_FIRE
+_WILL FIRE TRANSITION 2
+_PRINT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  [0xc00030b4a0 0xc00030b500]}
+_FIRE
+_WILL FIRE TRANSITION 2
+_PRINT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  [0xc0002f9f80 0xc00035c000]}
+_FIRE
+_PRINT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  [0xc00035dbc0 0xc00035dc20]}
+_FIRE
+_PRINT
+_ASK
+_WAITING AS leader
+_TIMEOUT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  [0xc00034cb40]}
+_FIRE
+_PRINT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  [0xc00030ff20]}
+_FIRE
+_PRINT
+_ASK
+_WAITING AS leader
+_TIMEOUT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_RECEIVED: {transitions 127.0.0.1:3001 9 follower  []}
+_FIRE
+_NO TRANSITION TO SELECT
+_ASK
+_WAITING AS leader
+_TIMEOUT
+_ASK
+_WAITING AS leader
+_TIMEOUT
+_ASK
+_WAITING AS leader
+_TIMEOUT
+_ASK
+_WAITING AS leader
