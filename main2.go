@@ -23,3 +23,10 @@ func main() {
   fmt.Printf("%v%n", p)
   communication.Run()
 }
+/*
+1) Estados en conexion y desconexion (reachability graph -> hacerlo bien es tema de otra tesis)
+2) Resolver conflictos
+
+Tabla
+| situacion   | Solucion  | attin   |
+*/
