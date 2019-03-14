@@ -8,7 +8,6 @@ import (
 	"github.com/FLAGlab/DCoPN/petrinet"
 	"github.com/perlin-network/noise"
 	"github.com/perlin-network/noise/skademlia"
-	"github.com/perlin-network/noise/protocol"
 )
 
 type petriNode struct {
@@ -129,11 +128,16 @@ func (pn *petriNode) SendMessageByAddress(msgToSend petriMessage, peerAddr strin
 	return peer.SendMessage(msgToSend)
 }
 
-func (pn *petriNode) printPetriNet(baseMsg petriMessage) {
+func (pn *petriNode) showPetriNetCurrentState() {
 	fmt.Println("Will print petri net")
 	fmt.Printf("%v\n", pn.petriNet)
+	time.Sleep(time.Duration(humanTimeout) * time.Millisecond)
+}
+
+func (pn *petriNode) printPetriNet(baseMsg petriMessage) {
 	baseMsg.Command = PrintCommand
 	skademlia.Broadcast(pn.node, baseMsg)
+	pn.showPetriNetCurrentState()
 	pn.incStep()
 }
 
@@ -142,7 +146,7 @@ func (pn *petriNode) broadcastWithTimeout(msg petriMessage, successCallback, tim
 	defer close(errChan)
 	go func() {
 		fmt.Printf("Doing broadcast of %v...\n", msg)
-		err := myBroadcast(pn.node, msg)
+		err := skademlia.Broadcast(pn.node, msg)
 		fmt.Println("Broadcast sent!")
 		errChan <- err
 	}()
@@ -172,33 +176,8 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 			fmt.Println(err)
 		}
 	case PrintCommand:
-		fmt.Println("CURRENT PETRI NET:")
-		fmt.Printf("%v\n", pn.petriNet)
+		pn.showPetriNetCurrentState()
 	default:
 		fmt.Printf("Unknown command: %v\n", pMsg.Command)
 	}
-}
-
-func myBroadcast(node *noise.Node, message noise.Message) (errs []error) {
-	errorChannels := make([]<-chan error, 0)
-
-	for index, peerID := range skademlia.FindClosestPeers(skademlia.Table(node), protocol.NodeID(node).Hash(), skademlia.BucketSize()) {
-		peer := protocol.Peer(node, peerID)
-
-		if peer == nil {
-			continue
-		}
-		fmt.Printf("peer %v is not nil: %v:%v\n", index, peer.RemoteIP(), peer.RemotePort())
-		errorChannels = append(errorChannels, peer.SendMessageAsync(message))
-	}
-
-	for index, ch := range errorChannels {
-		fmt.Printf("Done with %v\n", index)
-		err := <-ch
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	return
 }

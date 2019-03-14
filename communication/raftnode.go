@@ -115,7 +115,7 @@ func (rn *RaftNode) Listen() {
         rn.assembleElection()
       }
     }
-		time.Sleep(time.Duration(humanTimeout) * time.Millisecond)
+
   }
 }
 
