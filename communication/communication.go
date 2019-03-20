@@ -27,6 +27,10 @@ func getRand(Range int) int {
 func setup(rn *RaftNode) {
 	opcodeChat := noise.RegisterMessage(noise.NextAvailableOpcode(), (*petriMessage)(nil))
 	channelCount := 0
+	rn.pNode.node.OnPeerConnected(func(node *noise.Node, peer *noise.Peer) error {
+		fmt.Printf("PEER CONNECTED -> %v:%v\n", peer.RemoteIP(), peer.RemotePort())
+		return nil
+	})
 	rn.pNode.node.OnPeerInit(func(node *noise.Node, peer *noise.Peer) error {
 		// init se llama cuando se conecta un nodo o se le hace dial
 		channelCount++
@@ -44,10 +48,13 @@ func setup(rn *RaftNode) {
 		})
 		// acá solo se comunica con el peer que se acaba de inicializar
 		go func() {
+			timesUsed := 0
 			for msg := range peer.Receive(opcodeChat) {
 				rn.pMsg <- msg.(petriMessage)
-				fmt.Printf("HERE: Used channel %v\n", myChannel)
+				timesUsed++
+				fmt.Printf("HERE: Used channel %v (%v times)\n", myChannel, timesUsed)
 			}
+			// TODO: usar timeouts grandes para terminar la gorrutina si peer no recibe mas msg
 			fmt.Printf("HERE: Closed channel %v\n", myChannel)
 		}()
 		return nil
