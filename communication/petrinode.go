@@ -10,30 +10,49 @@ import (
 	"github.com/perlin-network/noise/skademlia"
 )
 
+type LeaderStep int
+
+const (
+	ASK_STEP LeaderStep = 0
+	RECEIVING_TRANSITIONS_STEP LeaderStep = 1
+	PREPARE_FIRE_STEP LeaderStep = 2
+	RECEIVING_MARKS_STEP LeaderStep = 3
+	FIRE_STEP LeaderStep = 4
+	PRINT_STEP LeaderStep = 5
+)
+
 type petriNode struct {
 	node *noise.Node
 	petriNet *petrinet.PetriNet
-	step int
+	step LeaderStep
 	timeoutCount int
 	transitionOptions map[string][]*petrinet.Transition
+	remoteTransitionOptions map[string]map[int]*petrinet.RemoteTransition
 	pMsg chan petriMessage
+	chosenTransition *petrinet.Transition
+	chosenTransitionAddress string
+	addressMissing map[string]bool
+	verifiedRemoteAddrs []string
+	marks map[int]*petrinet.RemoteArc
 }
 
 func (pn *petriNode) incStep() {
-	pn.step = (pn.step + 1) % 4
+	pn.step = (pn.step + 1) % (PRINT_STEP + 1)
 }
 
 func (pn *petriNode) resetStep() {
-	pn.step = 0
+	pn.step = ASK_STEP
 }
 
 func (pn *petriNode) initTransitionOptions() {
 	pn.transitionOptions = make(map[string][]*petrinet.Transition)
-	pn.transitionOptions[pn.node.ExternalAddress()] = pn.petriNet.GetTransitionOptions()
+	pn.remoteTransitionOptions = make(map[string]map[int]*petrinet.RemoteTransition)
+	pn.transitionOptions[pn.node.ExternalAddress()], _ = pn.petriNet.GetTransitionOptions() // TODO take into account remote transitions
 }
 
-func (pn *petriNode) addTransitionOption(key string, options []*petrinet.Transition) int {
+func (pn *petriNode) addTransitionOption(key string, options []*petrinet.Transition, remote map[int]*petrinet.RemoteTransition) int {
 	pn.transitionOptions[key] = options
+	pn.remoteTransitionOptions[key] = remote
 	return len(pn.transitionOptions)
 }
 
@@ -43,7 +62,9 @@ func (pn *petriNode) getTransition(pMsg petriMessage) {
 		pn.resetStep()
 		return
 	}
-	numDone := pn.addTransitionOption(pMsg.Address, pMsg.Transitions)
+	fmt.Printf("HERE: %v\n", pMsg)
+	fmt.Printf("HERE: %v\n", pn.transitionOptions)
+	numDone := pn.addTransitionOption(pMsg.Address, pMsg.Transitions, pMsg.RemoteTransitions)
 	expected := len(skademlia.Table(pn.node).GetPeers()) + 1 // plus me
 	if numDone == expected {
 		pn.incStep()
@@ -78,26 +99,161 @@ func (pn *petriNode) selectTransition() (*petrinet.Transition, string) {
 	return options[transitionIndex], chosenKey
 }
 
-func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
+func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, baseMsg petriMessage) map[string]bool {
+	connectedAddrs := make(map[string]bool)
+	if remoteTransition == nil {
+		return connectedAddrs
+	}
+	baseMsg.Command = MarksCommand
+	for rmtAddr, places := range remoteTransition.GetPlaceIDsByAddrs() {
+		// places is []int
+		baseMsg2 := baseMsg
+		baseMsg2.RemoteArcs = make([]*petrinet.RemoteArc, len(places))
+		for i, p := range places {
+			baseMsg2.RemoteArcs[i] = &petrinet.RemoteArc{PlaceID: p}
+		}
+		err := pn.SendMessageByAddress(baseMsg2, rmtAddr)
+		if err == nil {
+			connectedAddrs[rmtAddr] = true
+		}
+	}
+	return connectedAddrs
+}
+
+// if transition option is not valid, remove it
+func (pn *petriNode) removeTransitionOption(addrs string, transition *petrinet.Transition) {
+	// delete transition from option list
+	numElem := len(pn.transitionOptions[addrs])
+	if numElem - 1 == 0 {
+		pn.transitionOptions[addrs] = []*petrinet.Transition{}
+	} else {
+		delIndex := -1
+		for i, v := range pn.transitionOptions[addrs] {
+	    if v.ID == transition.ID {
+				delIndex = i
+				break
+	    }
+		}
+		if delIndex != -1 {
+			pn.transitionOptions[addrs][delIndex] = pn.transitionOptions[addrs][numElem - 1]
+			pn.transitionOptions[addrs] = pn.transitionOptions[addrs][:numElem - 1]
+		}
+	}
+	// delete remote transition from de transition
+	delete(pn.remoteTransitionOptions[addrs], transition.ID)
+}
+
+func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
+	if pMsg.Command != MarksCommand {
+		fmt.Printf("Expected marks, received something else: %v HERE\n", pMsg.Command)
+		pn.resetStep()
+		return
+	}
+	// TODO: save marks and check if it should incStep
+	for _, rmtArc := range pMsg.RemoteArcs {
+		pn.marks[rmtArc.PlaceID] = rmtArc
+	}
+	if pn.addressMissing[pMsg.Address] {
+		pn.verifiedRemoteAddrs = append(pn.verifiedRemoteAddrs, pMsg.Address)
+		delete(pn.addressMissing, pMsg.Address)
+	}
+	if len(pn.addressMissing) == 0 {
+		if !pn.validateRemoteTransitionMarks() {
+			pn.step = PREPARE_FIRE_STEP
+			pn.removeTransitionOption(pn.chosenTransitionAddress, pn.chosenTransition)
+		} else {
+			pn.incStep()
+		}
+	}
+}
+
+// after receiving all valid transitions, do this first and wait for askedAddrs to respond
+func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 	transition, peerAddr := pn.selectTransition()
+	pn.chosenTransition = transition
+	pn.chosenTransitionAddress = peerAddr
 	if transition == nil {
 		fmt.Println("_NO TRANSITION TO SELECT")
 		pn.resetStep()
-		return nil
+	} else {
+		remoteTransition := pn.remoteTransitionOptions[peerAddr][transition.ID]
+		askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
+		fmt.Println(askedAddrs)
+		pn.addressMissing = askedAddrs
+		pn.verifiedRemoteAddrs = []string{}
+		pn.marks = make(map[int]*petrinet.RemoteArc)
+		pn.incStep() // RECEIVING_MARKS_STEP
+		if len(pn.addressMissing) == 0 {
+			// skip RECEIVING_MARKS_STEP
+			pn.incStep() // FIRE_STEP
+		}
 	}
-	// fmt.Printf("SELECTED TRANSITION: %v\n", transition)
-	// fmt.Printf("Of peer: %v\n", peerAddr)
+}
+
+// after all askedAddrs responded, do this with the chosen transition
+// if timeout should try again, if not valid leader should delete transition and try again PREPARE_FIRE_STEP
+func (pn *petriNode) validateRemoteTransitionMarks() bool {
+	ans := true
+	marks := pn.marks
+	rmtTransition := pn.remoteTransitionOptions[pn.chosenTransitionAddress][pn.chosenTransition.ID]
+	helperFunc := func (arcList []petrinet.RemoteArc, comp func(int, int)bool) {
+		for _, currArc := range arcList { //rmtTransition.InArcs {
+			place, exists := marks[currArc.PlaceID]
+			if !exists {
+				continue
+			}
+			ans = ans && comp(place.Marks, currArc.Weight)
+		}
+	}
+	helperFunc(rmtTransition.InArcs, func(a, b int) bool { return a >= b})
+	helperFunc(rmtTransition.InhibitorArcs, func(a, b int) bool { return a < b})
+	return ans
+}
+
+
+func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, baseMsg petriMessage) {
+	if t != nil {
+		helperFunc := func(opType petrinet.OperationType, addrToArcMap map[string][]*petrinet.RemoteArc) {
+			for _, addr := range pn.verifiedRemoteAddrs {
+				baseMsg2 := baseMsg
+				baseMsg2.Command = AddToPlacesCommand
+				baseMsg2.RemoteArcs = addrToArcMap[addr]
+				baseMsg2.OpType = opType
+				if len(baseMsg2.RemoteArcs) > 0 {
+					if addr == pn.node.ExternalAddress() {
+						pn.petriNet.AddMarksToPlaces(opType, baseMsg2.RemoteArcs)
+					} else {
+						pn.SendMessageByAddress(baseMsg2, addr)
+					}
+				}
+		  }
+		}
+		placesToFire := t.GetInArcsByAddrs()
+		placesToReceive := t.GetOutArcsByAddrs()
+		helperFunc(petrinet.SUBSTRACTION, placesToFire)
+		helperFunc(petrinet.ADDITION, placesToReceive)
+	}
+}
+
+func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
+	transition := pn.chosenTransition
+	peerAddr := pn.chosenTransitionAddress
+	remoteTransition := pn.remoteTransitionOptions[peerAddr][transition.ID]
 	baseMsg.Command = FireCommand
 	baseMsg.Transitions = []*petrinet.Transition{transition}
+	var err error
 	if peerAddr == pn.node.ExternalAddress() {
+		// Transition is local
 		fmt.Printf("_WILL FIRE TRANSITION %v\n", transition.ID)
 		pn.petriNet.FireTransitionByID(transition.ID)
-		pn.incStep()
-		return nil
+		err = nil
+	} else {
+		// Transition is remote
+		err = pn.SendMessageByAddress(baseMsg, peerAddr)
 	}
-	// fmt.Printf("TRANSITION IS REMOTE: %v\n", peerAddr)
-	err := pn.SendMessageByAddress(baseMsg, peerAddr)
 	if err == nil {
+		// Transition fired with no problem
+		pn.fireRemoteTransition(remoteTransition, baseMsg) // Fire remote transition
 		pn.incStep()
 	} else {
 		pn.resetStep()
@@ -166,7 +322,12 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 	switch pMsg.Command {
 	case TransitionCommand:
 		baseMsg.Command = TransitionCommand
-		baseMsg.Transitions = pn.petriNet.GetTransitionOptions()
+		baseMsg.Transitions, baseMsg.RemoteTransitions = pn.petriNet.GetTransitionOptions() // TODO use remote transitions returned by this
+		pn.SendMessageByAddress(baseMsg, pMsg.Address)
+	case MarksCommand:
+		baseMsg.Command = MarksCommand
+		pn.petriNet.CopyPlaceMarksToRemoteArc(pMsg.RemoteArcs)
+		baseMsg.RemoteArcs = pMsg.RemoteArcs
 		pn.SendMessageByAddress(baseMsg, pMsg.Address)
 	case FireCommand:
 		transitionID := pMsg.Transitions[0].ID
@@ -177,6 +338,8 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 		}
 	case PrintCommand:
 		pn.showPetriNetCurrentState()
+	case AddToPlacesCommand:
+		pn.petriNet.AddMarksToPlaces(pMsg.OpType, pMsg.RemoteArcs)
 	default:
 		fmt.Printf("Unknown command: %v\n", pMsg.Command)
 	}

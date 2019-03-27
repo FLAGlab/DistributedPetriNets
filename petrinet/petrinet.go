@@ -30,14 +30,21 @@ package petrinet
 import (
   "fmt"
   "math"
-  "math/rand"
+)
+
+type OperationType int
+
+const (
+  ADDITION     OperationType = 0
+  SUBSTRACTION OperationType = 0
 )
 
 // PetriNet struct, has an id, transitions and places
 type PetriNet struct {
  id int
  transitions map[int]*Transition
- places map[int]*place
+ places map[int]*Place
+ remoteTransitions map[int]*RemoteTransition
 }
 
 func (pn PetriNet) String() string {
@@ -48,23 +55,31 @@ func (pn PetriNet) String() string {
   return s + "\n"
 }
 
-func (pn *PetriNet) Run() {
-  transitionOptions := pn.GetTransitionOptions()
-  for len(transitionOptions) > 0 {
-    transitionOptions[rand.Intn(len(transitionOptions))].fire()
-    fmt.Printf("%v\n", pn)
-    transitionOptions = pn.GetTransitionOptions()
-  }
-}
-
 // FireTransitionByID fires a transition given its ID
 func (pn *PetriNet) FireTransitionByID(transitionID int) error {
   return pn.transitions[transitionID].fire()
 }
 
+func (pn *PetriNet) CopyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
+  for _, rmtArc := range remoteArcs {
+    rmtArc.Marks = pn.places[rmtArc.PlaceID].marks
+  }
+}
+
+// AddMarksToPlaces adds weight (pos or neg) to specified places
+func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteArc) {
+  for _, rmtArc := range remoteArcs {
+    toAdd := rmtArc.Weight
+    if opType == SUBSTRACTION {
+      toAdd = -toAdd
+    }
+    pn.places[rmtArc.PlaceID].marks += toAdd
+  }
+}
+
 // GetTransitionOptions gets all the transitions with min priority that can be
-// fired
-func (pn *PetriNet) GetTransitionOptions() []*Transition {
+// fired with a map from transition ID to RemoteTransition
+func (pn *PetriNet) GetTransitionOptions() ([]*Transition, map[int]*RemoteTransition) {
   var transitionOptions []*Transition
   currMin := math.MaxInt64
   for _, currTransition := range pn.transitions {
@@ -77,11 +92,17 @@ func (pn *PetriNet) GetTransitionOptions() []*Transition {
       }
     }
   }
-  return transitionOptions
+  remoteTransitions := make(map[int]*RemoteTransition)
+  for _, option := range transitionOptions {
+    if remoteTransitions[option.ID] != nil {
+      remoteTransitions[option.ID] = remoteTransitions[option.ID]
+    }
+  }
+  return transitionOptions, remoteTransitions
 }
 
 func (pn *PetriNet) AddPlace(_id, _marks int, _label string) {
-  pn.places[_id] = &place{id: _id, marks: _marks, label: _label}
+  pn.places[_id] = &Place{ID: _id, marks: _marks, label: _label}
 }
 
 func (pn *PetriNet) AddTransition(_id, _priority int) {
@@ -95,28 +116,28 @@ func (pn *PetriNet) AddTransition(_id, _priority int) {
 func (pn *PetriNet) AddInArc(from,_transition,_weight int){
   pn.transitions[_transition].addInArc(
     arc {
-      _place: pn.places[from],
+      place: pn.places[from],
       weight: _weight})
 }
-func (pn *PetriNet) AddOutArc(_transition, to, _weight int){
-
+func (pn *PetriNet) AddOutArc(_transition, to, _weight int) {
   pn.transitions[_transition].addOutArc(
     arc {
-      _place: pn.places[to],
+      place: pn.places[to],
       weight: _weight})
 }
-func (pn *PetriNet) AddInhibitorArc(from,_transition,_weight int){
+func (pn *PetriNet) AddInhibitorArc(from,_transition,_weight int) {
   pn.transitions[_transition].addInhibitorArc(
     arc {
-      _place: pn.places[from],
+      place: pn.places[from],
       weight: _weight})
 }
 
 func Init(_id int) *PetriNet {
   return &PetriNet{
     id: _id,
-    places: make(map[int]*place),
-    transitions: make(map[int]*Transition)}
+    places: make(map[int]*Place),
+    transitions: make(map[int]*Transition),
+    remoteTransitions: make(map[int]*RemoteTransition)}
 }
 
 func Build() *PetriNet{

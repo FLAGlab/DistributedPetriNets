@@ -72,18 +72,22 @@ func (rn *RaftNode) Listen() {
   for {
 		fmt.Printf("STARTED ITERATION AS %v\n", rn.nodeType)
     if rn.nodeType == Leader {
-      for rn.pNode.step != 1 {
+      for rn.pNode.step != RECEIVING_TRANSITIONS_STEP && rn.pNode.step != RECEIVING_MARKS_STEP {
 				fmt.Printf("IS LEADER AT STEP: %v\n", rn.pNode.step)
         switch rn.pNode.step {
-        case 0:
+        case ASK_STEP:
 					fmt.Println("WILL ASK")
 					fmt.Println("_ASK")
           rn.pNode.ask(rn.generateBaseMessage())
-        case 2:
+        case PREPARE_FIRE_STEP:
+					fmt.Println("WILL PREPARE FIRE TRANSITION")
+					fmt.Println("_PREPARE FIRE")
+					rn.pNode.prepareFire(rn.generateBaseMessage())
+				case FIRE_STEP:
 					fmt.Println("WILL FIRE TRANSITION")
 					fmt.Println("_FIRE")
-          rn.pNode.fireTransition(rn.generateBaseMessage())
-        case 3:
+					rn.pNode.fireTransition(rn.generateBaseMessage())
+        case PRINT_STEP:
 					fmt.Println("WILL PRINT")
 					fmt.Println("_PRINT")
           rn.pNode.printPetriNet(rn.generateBaseMessage())
@@ -108,7 +112,7 @@ func (rn *RaftNode) Listen() {
 			fmt.Println("_TIMEOUT")
 			fmt.Printf("%v milliseconds already passed...", rn.timeoutCount + humanTimeout)
       if rn.nodeType == Leader {
-				fmt.Println("was leader")
+				fmt.Println("leader timed out")
         rn.pNode.resetStep()
       } else { // Candidate and Follower
 				fmt.Println("will do election !!")
@@ -128,7 +132,12 @@ func (rn *RaftNode) processLeader(pMsg petriMessage) {
 			rn.vote(pMsg.Term, pMsg.Address)
 		}
   } else if pMsg.Term == rn.currentTerm {
-    rn.pNode.getTransition(pMsg)
+		switch rn.pNode.step {
+		case RECEIVING_TRANSITIONS_STEP:
+    	rn.pNode.getTransition(pMsg)
+		case RECEIVING_MARKS_STEP:
+			rn.pNode.getPlaceMarks(pMsg)
+		}
   }
 }
 

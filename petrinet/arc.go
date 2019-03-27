@@ -5,10 +5,10 @@ import (
 )
 
 type arc struct {
-	_place *place
+	place *Place
 	weight int
 }
 
 func (a arc) String() string {
-	return fmt.Sprintf("{place: %v, weight: %v}", a._place, a.weight)
+	return fmt.Sprintf("{place: %v, weight: %v}", a.place, a.weight)
 }

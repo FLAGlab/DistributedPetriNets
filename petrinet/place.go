@@ -4,12 +4,17 @@ import (
 	"fmt"
 )
 
-type place struct {
-	id int
+type Place struct {
+	ID int
 	marks int
 	label string
 }
 
-func (a place) String() string {
-	return fmt.Sprintf("{id: %v, marks: %v, label: %v}", a.id, a.marks, a.label)
+func (a Place) String() string {
+	return fmt.Sprintf("{id: %v, marks: %v, label: %v}", a.ID, a.marks, a.label)
+}
+
+// GetMarks gets the marks on the place
+func (a *Place) GetMarks() int {
+	return a.marks
 }

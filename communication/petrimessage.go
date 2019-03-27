@@ -17,6 +17,8 @@ type CommandType string
 const (
 	// TransitionCommand to query transitions
 	TransitionCommand  CommandType = "transitions"
+	// MarksCommand to get number of marks on place
+	MarksCommand        CommandType = "marks"
 	// FireCommand to activate a fire event on the PetriNet
 	FireCommand        CommandType = "fire"
 	// PrintCommand to print the current state of the PetriNet
@@ -25,6 +27,8 @@ const (
 	VoteCommand        CommandType = "vote"
 	// RequestVoteCommand to request votes for a leader node
 	RequestVoteCommand CommandType = "requestvote"
+	// AddToPlacesCommand to request mark addition (pos or neg) to a place
+	AddToPlacesCommand CommandType = "addtoplaces"
 )
 
 type petriMessage struct {
@@ -34,6 +38,9 @@ type petriMessage struct {
 	FromType NodeType
 	VoteGranted string
 	Transitions []*petrinet.Transition
+	RemoteTransitions map[int]*petrinet.RemoteTransition
+	RemoteArcs []*petrinet.RemoteArc
+	OpType petrinet.OperationType
 }
 
 func (petriMessage) Read(reader payload.Reader) (noise.Message, error) {
