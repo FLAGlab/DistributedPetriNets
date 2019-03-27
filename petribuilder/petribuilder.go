@@ -5,7 +5,7 @@ import (
 )
 
 // BuildPetriNet builds a test petri net
-func BuildPetriNet() *petrinet.PetriNet {
+func BuildPetriNet1() *petrinet.PetriNet {
 	p := petrinet.Init(1)
 	p.AddPlace(1, 1, "")
 	p.AddPlace(2, 1, "")
@@ -22,4 +22,33 @@ func BuildPetriNet() *petrinet.PetriNet {
   //p.AddInhibitorArc(4,2,1)
 	// fmt.Printf("%v\n", p)
 	return p
+}
+
+// BuildPetriNet builds a test petri net
+func BuildPetriNet2() *petrinet.PetriNet {
+	p := petrinet.Init(2)
+	p.AddPlace(1, 4, "")
+	p.AddPlace(2, 0, "")
+	p.AddTransition(1,0)
+	p.AddInArc(1,1,1)
+	p.AddOutArc(1,2,1)
+  p.AddRemoteTransition(1)
+  p.AddRemoteInArc(1, 1, 1, "127.0.0.1:3002")
+  p.AddRemoteOutArc(1, 2, 1, "127.0.0.1:3002")
+	return p
+}
+
+// BuildPetriNet builds a test petri net
+func BuildPetriNet3() *petrinet.PetriNet {
+	p := petrinet.Init(3)
+
+	p.AddPlace(1, 4, "")
+	p.AddPlace(2, 0, "")
+	p.AddTransition(1, 0)
+	p.AddInArc(1,1,1)
+	p.AddOutArc(1,2,1)
+  p.AddRemoteTransition(1)
+  p.AddRemoteInArc(1, 1, 1, "127.0.0.1:3001")
+  p.AddRemoteInArc(1, 1, 1, "127.0.0.1:3001")
+  return p
 }

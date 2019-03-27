@@ -36,7 +36,7 @@ type OperationType int
 
 const (
   ADDITION     OperationType = 0
-  SUBSTRACTION OperationType = 0
+  SUBSTRACTION OperationType = 1
 )
 
 // PetriNet struct, has an id, transitions and places
@@ -68,13 +68,17 @@ func (pn *PetriNet) CopyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
 
 // AddMarksToPlaces adds weight (pos or neg) to specified places
 func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteArc) {
+  fmt.Println("WILL ADD MARKS TO PLACES")
+  fmt.Printf("OLD MARKS: %v\n", pn)
   for _, rmtArc := range remoteArcs {
     toAdd := rmtArc.Weight
     if opType == SUBSTRACTION {
       toAdd = -toAdd
     }
+    fmt.Printf("WILL ADD: %v\n", toAdd)
     pn.places[rmtArc.PlaceID].marks += toAdd
   }
+  fmt.Printf("NEW MARKS: %v\n", pn)
 }
 
 // GetTransitionOptions gets all the transitions with min priority that can be
@@ -94,8 +98,8 @@ func (pn *PetriNet) GetTransitionOptions() ([]*Transition, map[int]*RemoteTransi
   }
   remoteTransitions := make(map[int]*RemoteTransition)
   for _, option := range transitionOptions {
-    if remoteTransitions[option.ID] != nil {
-      remoteTransitions[option.ID] = remoteTransitions[option.ID]
+    if pn.remoteTransitions[option.ID] != nil {
+      remoteTransitions[option.ID] = pn.remoteTransitions[option.ID]
     }
   }
   return transitionOptions, remoteTransitions
@@ -132,6 +136,40 @@ func (pn *PetriNet) AddInhibitorArc(from,_transition,_weight int) {
       weight: _weight})
 }
 
+func (pn *PetriNet) AddRemoteTransition(_id int) {
+  fmt.Println("will add remote transition")
+  fmt.Println(_id)
+  pn.remoteTransitions[_id] = &RemoteTransition {
+    ID: _id,
+    InArcs: make([]RemoteArc,0),
+    OutArcs: make([]RemoteArc,0),
+    InhibitorArcs: make([]RemoteArc,0)}
+}
+
+func (pn *PetriNet) AddRemoteInArc(from,_transition, weight int, fromAddr string) {
+  fmt.Println("will add remote in arc")
+  fmt.Printf("%d %d %v\n", from, _transition, pn.remoteTransitions[_transition])
+  pn.remoteTransitions[_transition].addInArc(
+    RemoteArc {
+      PlaceID: from,
+      Address: fromAddr,
+      Weight: weight})
+}
+func (pn *PetriNet) AddRemoteOutArc(_transition, to, weight int, toAddr string) {
+  pn.remoteTransitions[_transition].addOutArc(
+    RemoteArc {
+      PlaceID: to,
+      Address: toAddr,
+      Weight: weight})
+}
+func (pn *PetriNet) AddRemoteInhibitorArc(from,_transition, weight int, fromAddr string) {
+  pn.remoteTransitions[_transition].addInhibitorArc(
+    RemoteArc {
+      PlaceID: from,
+      Address: fromAddr,
+      Weight: weight})
+}
+
 func Init(_id int) *PetriNet {
   return &PetriNet{
     id: _id,
@@ -140,36 +178,6 @@ func Init(_id int) *PetriNet {
     remoteTransitions: make(map[int]*RemoteTransition)}
 }
 
-func Build() *PetriNet{
-  /*fpt := []Arc{Arc{p: 1, t: 1, w: 1}, Arc{p: 2, t: 2, w: 1}, Arc{p: 3, t: 2, w: 1}}
-	ftp := []Arc{Arc{t: 1, p: 2, w: 1}, Arc{t: 1, p: 3, w: 1}, Arc{t: 2, p: 4, w: 1}}
-	m := make(map[int]int)
-	inhi := []Arc{Arc{t: 2, p: 4, w:1}}
-	m[1] = 1
-	m[3] = 2
-	m[4] = 1
-	p := InitPetriNet(4, 2, fpt, ftp, inhi, m)
-  fmt.Printf("%v", p)
-  p.Run()
-  */
-
-  p := Init(1)
-  p.AddPlace(1, 1, "")
-  p.AddPlace(2, 1, "")
-  p.AddPlace(3, 2, "")
-  p.AddPlace(4, 1, "")
-  p.AddTransition(1,1)
-  p.AddTransition(2,0)
-  p.AddInArc(1,1,1)
-  p.AddInArc(2,2,1)
-  p.AddInArc(3,2,1)
-  p.AddOutArc(1,2,1)
-  p.AddOutArc(1,3,1)
-  p.AddOutArc(2,4,1)
-  //p.addInhibitorArc(4,2,1)
-  //fmt.Printf("%v\n", p)
-  return p
-}
 /*
 Hacer ejercicio de mutual exclution distribuido
 que pasa si se conecta en medio de elegir y fire

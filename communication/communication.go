@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/FLAGlab/DCoPN/petribuilder"
+	"github.com/FLAGlab/DCoPN/petrinet"
 	"github.com/perlin-network/noise"
 	"github.com/perlin-network/noise/cipher/aead"
 	"github.com/perlin-network/noise/handshake/ecdh"
@@ -86,7 +87,15 @@ func Run() {
 	p.Register(aead.New())
 	p.Register(skademlia.New())
 	p.Enforce(node)
-	pnNode := &petriNode{node: node, petriNet: petribuilder.BuildPetriNet()}
+	var pnet *petrinet.PetriNet
+	if *portFlag == uint(3000) {
+		pnet = petribuilder.BuildPetriNet1()
+	} else if *portFlag == uint(3001) {
+		pnet = petribuilder.BuildPetriNet2()
+	} else if *portFlag == uint(3002) {
+		pnet = petribuilder.BuildPetriNet3()
+	}
+	pnNode := &petriNode{node: node, petriNet: pnet}
 	rn := InitRaftNode(pnNode, *leaderFlag)
 	defer rn.close()
 	go rn.Listen()

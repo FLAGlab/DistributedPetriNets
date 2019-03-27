@@ -79,10 +79,18 @@ func (rn *RaftNode) Listen() {
 					fmt.Println("WILL ASK")
 					fmt.Println("_ASK")
           rn.pNode.ask(rn.generateBaseMessage())
+					total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
+					if total == 1 && rn.pNode.step == RECEIVING_TRANSITIONS_STEP {
+						rn.pNode.incStep() // skip RECEIVING_TRANSITIONS_STEP if Im the only one
+					}
         case PREPARE_FIRE_STEP:
 					fmt.Println("WILL PREPARE FIRE TRANSITION")
 					fmt.Println("_PREPARE FIRE")
 					rn.pNode.prepareFire(rn.generateBaseMessage())
+					total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
+					if total == 1 && rn.pNode.step == RECEIVING_MARKS_STEP {
+						rn.pNode.incStep() // skip RECEIVING_MARKS_STEP if Im the only one
+					}
 				case FIRE_STEP:
 					fmt.Println("WILL FIRE TRANSITION")
 					fmt.Println("_FIRE")
@@ -96,6 +104,9 @@ func (rn *RaftNode) Listen() {
     }
 		fmt.Println("Will wait for msg...")
 		fmt.Printf("_WAITING AS %v\n", rn.nodeType)
+		if rn.nodeType == Leader {
+			fmt.Printf("_WAITING STEP %v\n", rn.pNode.step)
+		}
     select {
     case pMsg := <- rn.pMsg:
 			fmt.Printf("Msg received: %v\n", pMsg)
@@ -157,6 +168,27 @@ func (rn *RaftNode) processFollower(pMsg petriMessage) {
   }
 }
 
+func (rn *RaftNode) closePolls() {
+	fmt.Println("POLLS ARE CLOSED!!!")
+	countMap := make(map[string]int)
+	maxVotes := 0
+	maxVoteAddress := ""
+	for _, voteAddr := range rn.myVotes {
+		countMap[voteAddr]++
+		if countMap[voteAddr] > maxVotes {
+			maxVotes = countMap[voteAddr]
+			maxVoteAddress = voteAddr
+		}
+	}
+	fmt.Printf("WINNER: %v, COUNT: %v\n", maxVoteAddress, maxVotes)
+	if maxVoteAddress == rn.pNode.node.ExternalAddress() { // I won!!
+		fmt.Println("LEADER SETTED AS ME !!! >:v")
+		rn.setNodeType(Leader)
+	} else {
+		rn.setNodeType(Follower)
+	}
+}
+
 func (rn *RaftNode) processCandidate(pMsg petriMessage) {
   fmt.Printf("Processing msg as candidate: %v", pMsg)
   if pMsg.Term > rn.currentTerm {
@@ -177,24 +209,7 @@ func (rn *RaftNode) processCandidate(pMsg petriMessage) {
     fmt.Printf("Total of votes: %v\n", rn.myVotes)
     fmt.Printf("Total of peers: %v\n", total)
     if len(rn.myVotes) == total { // polls are closed!
-      fmt.Println("POLLS ARE CLOSED!!!")
-      countMap := make(map[string]int)
-      maxVotes := 0
-      maxVoteAddress := ""
-      for _, voteAddr := range rn.myVotes {
-        countMap[voteAddr]++
-        if countMap[voteAddr] > maxVotes {
-          maxVotes = countMap[voteAddr]
-          maxVoteAddress = voteAddr
-        }
-      }
-      fmt.Printf("WINNER: %v, COUNT: %v\n", maxVoteAddress, maxVotes)
-      if maxVoteAddress == rn.pNode.node.ExternalAddress() { // I won!!
-        fmt.Println("LEADER SETTED AS ME !!! >:v")
-        rn.setNodeType(Leader)
-      } else {
-        rn.setNodeType(Follower)
-      }
+      rn.closePolls()
     }
   } // else is an old leader msg, ignore
 }
@@ -205,15 +220,20 @@ func (rn *RaftNode) assembleElection() {
   rn.myVotes[myAddr] = myAddr
   rn.currentTerm++
   rn.votedFor = myAddr
-	successCallback := func() {
-		fmt.Println("assembleElection done correclty")
+	total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
+	if len(rn.myVotes) == total { // polls are closed!
+		rn.closePolls()
+	} else {
+		successCallback := func() {
+			fmt.Println("assembleElection done correclty")
+		}
+	  timeoutCallback := func () {
+			fmt.Println("assembleElection didnt wor")
+	    rn.setNodeType(Candidate)
+	  }
+	  rn.pNode.broadcastWithTimeout(rn.generateMessageWithCommand(RequestVoteCommand),
+	    successCallback, timeoutCallback)
 	}
-  timeoutCallback := func () {
-		fmt.Println("assembleElection didnt wor")
-    rn.setNodeType(Candidate)
-  }
-  rn.pNode.broadcastWithTimeout(rn.generateMessageWithCommand(RequestVoteCommand),
-    successCallback, timeoutCallback)
 }
 
 func (rn *RaftNode) vote(candidateTerm int, candidateAddress string) {
