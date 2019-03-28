@@ -143,6 +143,7 @@ func (rn *RaftNode) processLeader(pMsg petriMessage) {
 			rn.vote(pMsg.Term, pMsg.Address)
 		}
   } else if pMsg.Term == rn.currentTerm {
+		rn.pNode.updateCtx(pMsg)
 		switch rn.pNode.step {
 		case RECEIVING_TRANSITIONS_STEP:
     	rn.pNode.getTransition(pMsg)
@@ -257,6 +258,7 @@ func (rn *RaftNode) generateBaseMessage() petriMessage {
 	return petriMessage {
 		Address: rn.pNode.node.ExternalAddress(),
 		Term: rn.currentTerm,
+		PetriContext: rn.pNode.petriNet.Context,
 		FromType: rn.nodeType}
 }
 

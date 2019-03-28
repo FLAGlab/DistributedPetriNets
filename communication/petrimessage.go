@@ -41,6 +41,7 @@ type petriMessage struct {
 	RemoteTransitions map[int]*petrinet.RemoteTransition
 	RemoteArcs []*petrinet.RemoteArc
 	OpType petrinet.OperationType
+	PetriContext string
 }
 
 func (petriMessage) Read(reader payload.Reader) (noise.Message, error) {

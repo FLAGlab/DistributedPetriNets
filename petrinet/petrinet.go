@@ -42,6 +42,7 @@ const (
 // PetriNet struct, has an id, transitions and places
 type PetriNet struct {
  id int
+ Context string
  transitions map[int]*Transition
  places map[int]*Place
  remoteTransitions map[int]*RemoteTransition
@@ -61,9 +62,15 @@ func (pn *PetriNet) FireTransitionByID(transitionID int) error {
 }
 
 func (pn *PetriNet) CopyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
-  for _, rmtArc := range remoteArcs {
-    rmtArc.Marks = pn.places[rmtArc.PlaceID].marks
+  fmt.Println("WILL COPY PLACE MARKS TO REMOTE ARC METH")
+  fmt.Printf("BEFORE: %v\n", remoteArcs)
+  for i, rmtArc := range remoteArcs {
+    fmt.Printf("CURRENT PLACE: %v, PLACE MARKS: %v\n", rmtArc.PlaceID, pn.places[rmtArc.PlaceID].marks)
+    fmt.Printf("CURR: %v\n", remoteArcs[i])
+    remoteArcs[i].Marks = pn.places[rmtArc.PlaceID].marks
+    fmt.Printf("CURR AFTER: %v\n", remoteArcs[i])
   }
+  fmt.Printf("AFTER: %v\n", remoteArcs)
 }
 
 // AddMarksToPlaces adds weight (pos or neg) to specified places
@@ -146,34 +153,35 @@ func (pn *PetriNet) AddRemoteTransition(_id int) {
     InhibitorArcs: make([]RemoteArc,0)}
 }
 
-func (pn *PetriNet) AddRemoteInArc(from,_transition, weight int, fromAddr string) {
+func (pn *PetriNet) AddRemoteInArc(from,_transition, weight int, context string) {
   fmt.Println("will add remote in arc")
   fmt.Printf("%d %d %v\n", from, _transition, pn.remoteTransitions[_transition])
   pn.remoteTransitions[_transition].addInArc(
     RemoteArc {
       PlaceID: from,
-      Address: fromAddr,
+      Context: context,
       Weight: weight})
 }
-func (pn *PetriNet) AddRemoteOutArc(_transition, to, weight int, toAddr string) {
+func (pn *PetriNet) AddRemoteOutArc(_transition, to, weight int, context string) {
   pn.remoteTransitions[_transition].addOutArc(
     RemoteArc {
       PlaceID: to,
-      Address: toAddr,
+      Context: context,
       Weight: weight})
 }
-func (pn *PetriNet) AddRemoteInhibitorArc(from,_transition, weight int, fromAddr string) {
+func (pn *PetriNet) AddRemoteInhibitorArc(from,_transition, weight int, context string) {
   pn.remoteTransitions[_transition].addInhibitorArc(
     RemoteArc {
       PlaceID: from,
-      Address: fromAddr,
+      Context: context,
       Weight: weight})
 }
 
-func Init(_id int) *PetriNet {
+func Init(_id int, context string) *PetriNet {
   return &PetriNet{
     id: _id,
     places: make(map[int]*Place),
+    Context: context,
     transitions: make(map[int]*Transition),
     remoteTransitions: make(map[int]*RemoteTransition)}
 }

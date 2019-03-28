@@ -30,10 +30,21 @@ type petriNode struct {
 	remoteTransitionOptions map[string]map[int]*petrinet.RemoteTransition
 	pMsg chan petriMessage
 	chosenTransition *petrinet.Transition
+	chosenRemoteTransition *petrinet.RemoteTransition
 	chosenTransitionAddress string
 	addressMissing map[string]bool
 	verifiedRemoteAddrs []string
-	marks map[int]*petrinet.RemoteArc
+	marks map[string]map[int]*petrinet.RemoteArc
+	contextToAddrs map[string][]string
+	addrsToContext map[string]string
+}
+
+func InitPetriNode(node *noise.Node, petriNet *petrinet.PetriNet) *petriNode {
+	return &petriNode{
+		node: node,
+		petriNet: petriNet,
+		contextToAddrs: make(map[string][]string),
+		addrsToContext: make(map[string]string)}
 }
 
 func (pn *petriNode) incStep() {
@@ -114,9 +125,8 @@ func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, ba
 		}
 		var err error
 		if rmtAddr == pn.node.ExternalAddress() {
-			// TODO get marks from local
 			for _, rmtArc := range baseMsg2.RemoteArcs {
-				pn.marks[rmtArc.PlaceID] = rmtArc
+				pn.saveMarks(rmtAddr, rmtArc.PlaceID, rmtArc)
 			}
 		} else {
 			err = pn.SendMessageByAddress(baseMsg2, rmtAddr)
@@ -151,6 +161,15 @@ func (pn *petriNode) removeTransitionOption(addrs string, transition *petrinet.T
 	delete(pn.remoteTransitionOptions[addrs], transition.ID)
 }
 
+func (pn *petriNode) saveMarks(addr string, placeID int, rmtArc *petrinet.RemoteArc) {
+	placeMap, exists := pn.marks[addr]
+	if !exists {
+		pn.marks[addr] = make(map[int]*petrinet.RemoteArc)
+		placeMap = pn.marks[addr]
+	}
+	placeMap[placeID] = rmtArc
+}
+
 func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 	fmt.Println("RECEIVED A MARK MSG")
 	if pMsg.Command != MarksCommand {
@@ -159,7 +178,7 @@ func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 		return
 	}
 	for _, rmtArc := range pMsg.RemoteArcs {
-		pn.marks[rmtArc.PlaceID] = rmtArc
+		pn.saveMarks(pMsg.Address, rmtArc.PlaceID, rmtArc)
 	}
 	fmt.Printf("CURR ADDRESS: %v\n", pMsg.Address)
 	fmt.Printf("ADDRESS MISSING: %v\n", pn.addressMissing)
@@ -192,8 +211,11 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		pn.resetStep()
 	} else {
 		pn.verifiedRemoteAddrs = []string{}
-		pn.marks = make(map[int]*petrinet.RemoteArc)
-		remoteTransition := pn.remoteTransitionOptions[peerAddr][transition.ID]
+		pn.marks = make(map[string]map[int]*petrinet.RemoteArc) // TODO change to map[string]map[int]*petrinet.RemoteArc
+		copy := *pn.remoteTransitionOptions[peerAddr][transition.ID] // get a copy
+		remoteTransition := &copy
+		remoteTransition.UpdateAddressByContext(pn.contextToAddrs)
+		pn.chosenRemoteTransition = remoteTransition
 		askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
 		fmt.Println(askedAddrs)
 		pn.addressMissing = askedAddrs
@@ -212,11 +234,11 @@ func (pn *petriNode) validateRemoteTransitionMarks() bool {
 	ans := true
 	marks := pn.marks
 	fmt.Printf("MARKS: %v\n", marks)
-	rmtTransition := pn.remoteTransitionOptions[pn.chosenTransitionAddress][pn.chosenTransition.ID]
+	rmtTransition := pn.chosenRemoteTransition
 	fmt.Printf("RMT TRANSITION: %v\n", rmtTransition)
 	helperFunc := func (arcList []petrinet.RemoteArc, comp func(int, int)bool) {
 		for _, currArc := range arcList { //rmtTransition.InArcs {
-			place, exists := marks[currArc.PlaceID]
+			place, exists := marks[currArc.Address][currArc.PlaceID]
 			if !exists {
 				continue
 			}
@@ -266,7 +288,7 @@ func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
 	fmt.Println("WILL FIRE TRANSITION METH")
 	transition := pn.chosenTransition
 	peerAddr := pn.chosenTransitionAddress
-	remoteTransition := pn.remoteTransitionOptions[peerAddr][transition.ID]
+	remoteTransition := pn.chosenRemoteTransition
 	baseMsg.Command = FireCommand
 	baseMsg.Transitions = []*petrinet.Transition{transition}
 	var err error
@@ -358,7 +380,9 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 	case MarksCommand:
 		baseMsg.Command = MarksCommand
 		pn.petriNet.CopyPlaceMarksToRemoteArc(pMsg.RemoteArcs)
+		fmt.Printf("COPY PLACE MARKS TO RMTARC RES: %v\n", pMsg.RemoteArcs)
 		baseMsg.RemoteArcs = pMsg.RemoteArcs
+		fmt.Printf("WILL SEND MSG: %v\n", baseMsg)
 		pn.SendMessageByAddress(baseMsg, pMsg.Address)
 	case FireCommand:
 		transitionID := pMsg.Transitions[0].ID
@@ -374,4 +398,28 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 	default:
 		fmt.Printf("Unknown command: %v\n", pMsg.Command)
 	}
+}
+
+func (pn *petriNode) updateCtx(pMsg petriMessage) {
+	ctx := pMsg.PetriContext
+	addr := pMsg.Address
+	oldCtx, exists := pn.addrsToContext[addr]
+	if !exists {
+		pn.addrsToContext[addr] = ctx
+		pn.contextToAddrs[ctx] = append(pn.contextToAddrs[ctx], addr)
+	} else if oldCtx != ctx {
+		pn.addrsToContext[addr] = ctx
+		pn.contextToAddrs[ctx] = removeStringList(ctx, pn.contextToAddrs[ctx])
+		pn.contextToAddrs[ctx] = append(pn.contextToAddrs[ctx], addr)
+	}
+}
+
+func removeStringList(elem string, list []string) []string {
+	var ans []string
+	for _, curr := range list {
+		if elem != curr {
+			ans = append(ans, elem)
+		}
+	}
+	return ans
 }

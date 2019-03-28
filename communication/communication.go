@@ -95,7 +95,7 @@ func Run() {
 	} else if *portFlag == uint(3002) {
 		pnet = petribuilder.BuildPetriNet3()
 	}
-	pnNode := &petriNode{node: node, petriNet: pnet}
+	pnNode := InitPetriNode(node, pnet)
 	rn := InitRaftNode(pnNode, *leaderFlag)
 	defer rn.close()
 	go rn.Listen()
