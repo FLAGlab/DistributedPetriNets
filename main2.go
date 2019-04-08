@@ -28,3 +28,9 @@ func main() {
 Tabla
 | situacion   | Solucion  | attin   |
 */
+
+/*
+
+TODO: posibilidad de no disparar ninguna
+
+*/

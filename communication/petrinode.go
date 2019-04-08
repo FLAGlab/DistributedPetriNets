@@ -192,10 +192,11 @@ func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 	fmt.Printf("ADDRESS MISSING AFTER DELETION: %v\n", pn.addressMissing)
 	if len(pn.addressMissing) == 0 {
 		if !pn.validateRemoteTransitionMarks() {
-			pn.step = PREPARE_FIRE_STEP
+			// transition wasn't ready to fire, remove from options and try again
 			pn.removeTransitionOption(pn.chosenTransitionAddress, pn.chosenTransition)
+			pn.step = PREPARE_FIRE_STEP
 		} else {
-			pn.incStep()
+			pn.incStep() // FIRE_STEP
 		}
 	}
 }
@@ -211,17 +212,24 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		pn.resetStep()
 	} else {
 		pn.verifiedRemoteAddrs = []string{}
-		pn.marks = make(map[string]map[int]*petrinet.RemoteArc) // TODO change to map[string]map[int]*petrinet.RemoteArc
-		copy := *pn.remoteTransitionOptions[peerAddr][transition.ID] // get a copy
-		remoteTransition := &copy
-		remoteTransition.UpdateAddressByContext(pn.contextToAddrs)
-		pn.chosenRemoteTransition = remoteTransition
-		askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
-		fmt.Println(askedAddrs)
-		pn.addressMissing = askedAddrs
-		pn.incStep() // RECEIVING_MARKS_STEP
-		if len(pn.addressMissing) == 0 {
-			// skip RECEIVING_MARKS_STEP
+		pn.marks = make(map[string]map[int]*petrinet.RemoteArc)
+		rmtTransitionOption, ok := pn.remoteTransitionOptions[peerAddr][transition.ID]
+		if ok {
+			copy := *rmtTransitionOption // get a copy
+			remoteTransition := &copy // pointer to the copy
+			remoteTransition.UpdateAddressByContext(pn.contextToAddrs)
+			pn.chosenRemoteTransition = remoteTransition
+			askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
+			fmt.Println(askedAddrs)
+			pn.addressMissing = askedAddrs
+			pn.incStep() // RECEIVING_MARKS_STEP
+			if len(pn.addressMissing) == 0 {
+				// skip RECEIVING_MARKS_STEP
+				pn.incStep() // FIRE_STEP
+			}
+		} else {
+			// there's nothing remote to fire, skip to FIRE_STEP
+			pn.incStep() // RECEIVING_MARKS_STEP
 			pn.incStep() // FIRE_STEP
 		}
 	}
