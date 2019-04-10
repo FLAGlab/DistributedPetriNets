@@ -68,6 +68,7 @@ func Run() {
 	hostFlag := flag.String("h", "127.0.0.1", "host to listen for peers on")
 	portFlag := flag.Uint("p", 3000, "port to listen for peers on")
 	leaderFlag := flag.Bool("l", false, "is leader node")
+	experimentFlag := flag.Uint("exp1", 0, "Create exp1 petri node with the given id")
 	flag.Parse()
 
 	params := noise.DefaultParams()
@@ -88,11 +89,17 @@ func Run() {
 	p.Register(skademlia.New())
 	p.Enforce(node)
 	var pnet *petrinet.PetriNet
-	if *portFlag == uint(3000) {
+	if *experimentFlag != uint(0) {
+		fmt.Println("CREATED EXPERIMENT")
+		pnet = petribuilder.BuildExperiment1(int(*experimentFlag))
+	} else if *portFlag == uint(3000) {
+		fmt.Println("CREATED PETRI NET 1")
 		pnet = petribuilder.BuildPetriNet1()
 	} else if *portFlag == uint(3001) {
+		fmt.Println("CREATED PETRI NET 2")
 		pnet = petribuilder.BuildPetriNet2()
 	} else if *portFlag == uint(3002) {
+		fmt.Println("CREATED PETRI NET 3")
 		pnet = petribuilder.BuildPetriNet3()
 	}
 	pnNode := InitPetriNode(node, pnet)

@@ -217,7 +217,7 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		if ok {
 			copy := *rmtTransitionOption // get a copy
 			remoteTransition := &copy // pointer to the copy
-			remoteTransition.UpdateAddressByContext(pn.contextToAddrs)
+			remoteTransition.UpdateAddressByContext(pn.contextToAddrs, peerAddr)
 			pn.chosenRemoteTransition = remoteTransition
 			askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
 			fmt.Println(askedAddrs)

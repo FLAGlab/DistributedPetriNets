@@ -37,23 +37,25 @@ func convertToAddressArcsMap(raList []RemoteArc) map[string][]*RemoteArc {
 	return ans
 }
 
-func createArcsWithAddress(arcList []RemoteArc, contextToAddrs map[string][]string) []RemoteArc {
+func createArcsWithAddress(arcList []RemoteArc, contextToAddrs map[string][]string, myAddr string) []RemoteArc {
 	var newArcs []RemoteArc
 	for _, item := range arcList {
 		copy := item
 		addrs := contextToAddrs[copy.Context]
 		for _, addr := range addrs {
-			copy.Address = addr
-			newArcs = append(newArcs, copy)
+			if myAddr != addr { // avoid connecting with self
+				copy.Address = addr
+				newArcs = append(newArcs, copy)
+			}
 		}
 	}
 	return newArcs
 }
 
-func (t *RemoteTransition) UpdateAddressByContext(contextToAddrs map[string][]string) {
-	t.InArcs = createArcsWithAddress(t.InArcs, contextToAddrs)
-	t.OutArcs = createArcsWithAddress(t.OutArcs, contextToAddrs)
-	t.InhibitorArcs = createArcsWithAddress(t.InhibitorArcs, contextToAddrs)
+func (t *RemoteTransition) UpdateAddressByContext(contextToAddrs map[string][]string, myAddr string) {
+	t.InArcs = createArcsWithAddress(t.InArcs, contextToAddrs, myAddr)
+	t.OutArcs = createArcsWithAddress(t.OutArcs, contextToAddrs, myAddr)
+	t.InhibitorArcs = createArcsWithAddress(t.InhibitorArcs, contextToAddrs, myAddr)
 }
 
 func (t *RemoteTransition) GetInArcsByAddrs() map[string][]*RemoteArc {
