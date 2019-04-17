@@ -54,7 +54,6 @@ func (rn *RaftNode) close() {
 }
 
 func (rn *RaftNode) setNodeType(nodeType NodeType) {
-	fmt.Printf("_TYPE %v\n", nodeType)
   rn.nodeType = nodeType
 	currTimeout := LeaderTimeout
 	if nodeType != Leader {
@@ -76,7 +75,6 @@ func (rn *RaftNode) Listen() {
 				fmt.Printf("IS LEADER AT STEP: %v\n", rn.pNode.step)
         switch rn.pNode.step {
         case ASK_STEP:
-					fmt.Println("WILL ASK")
 					fmt.Println("_ASK")
           rn.pNode.ask(rn.generateBaseMessage())
 					total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
@@ -84,7 +82,6 @@ func (rn *RaftNode) Listen() {
 						rn.pNode.incStep() // skip RECEIVING_TRANSITIONS_STEP if Im the only one
 					}
         case PREPARE_FIRE_STEP:
-					fmt.Println("WILL PREPARE FIRE TRANSITION")
 					fmt.Println("_PREPARE FIRE")
 					rn.pNode.prepareFire(rn.generateBaseMessage())
 					total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
@@ -92,24 +89,17 @@ func (rn *RaftNode) Listen() {
 						rn.pNode.incStep() // skip RECEIVING_MARKS_STEP if Im the only one
 					}
 				case FIRE_STEP:
-					fmt.Println("WILL FIRE TRANSITION")
 					fmt.Println("_FIRE")
 					rn.pNode.fireTransition(rn.generateBaseMessage())
         case PRINT_STEP:
-					fmt.Println("WILL PRINT")
 					fmt.Println("_PRINT")
           rn.pNode.printPetriNet(rn.generateBaseMessage())
         }
       } // TODO take into account timeout
     }
-		fmt.Println("Will wait for msg...")
 		fmt.Printf("_WAITING AS %v\n", rn.nodeType)
-		if rn.nodeType == Leader {
-			fmt.Printf("_WAITING STEP %v\n", rn.pNode.step)
-		}
     select {
     case pMsg := <- rn.pMsg:
-			fmt.Printf("Msg received: %v\n", pMsg)
 			fmt.Printf("_RECEIVED: %v\n", pMsg)
       switch rn.nodeType {
       case Leader:
@@ -130,7 +120,6 @@ func (rn *RaftNode) Listen() {
         rn.assembleElection()
       }
     }
-
   }
 }
 
@@ -154,7 +143,6 @@ func (rn *RaftNode) processLeader(pMsg petriMessage) {
 }
 
 func (rn *RaftNode) processFollower(pMsg petriMessage) {
-  fmt.Printf("Received msg: %v\n", pMsg)
   if pMsg.Term >= rn.currentTerm {
     rn.currentTerm = pMsg.Term
     if pMsg.Command == RequestVoteCommand {
@@ -181,8 +169,14 @@ func (rn *RaftNode) closePolls() {
 			maxVoteAddress = voteAddr
 		}
 	}
+	totMax := 0 // to check if there is a tie
+	for _, value := range countMap {
+		if value == maxVotes {
+			totMax++
+		}
+	}
 	fmt.Printf("WINNER: %v, COUNT: %v\n", maxVoteAddress, maxVotes)
-	if maxVoteAddress == rn.pNode.node.ExternalAddress() { // I won!!
+	if maxVoteAddress == rn.pNode.node.ExternalAddress() && totMax == 1 { // I won!! Only me
 		fmt.Println("LEADER SETTED AS ME !!! >:v")
 		rn.setNodeType(Leader)
 	} else {
@@ -191,7 +185,6 @@ func (rn *RaftNode) closePolls() {
 }
 
 func (rn *RaftNode) processCandidate(pMsg petriMessage) {
-  fmt.Printf("Processing msg as candidate: %v", pMsg)
   if pMsg.Term > rn.currentTerm {
     // theres a leader !!
     rn.currentTerm = pMsg.Term
@@ -208,7 +201,6 @@ func (rn *RaftNode) processCandidate(pMsg petriMessage) {
     rn.myVotes[pMsg.Address] = pMsg.VoteGranted
     total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
     fmt.Printf("Total of votes: %v\n", rn.myVotes)
-    fmt.Printf("Total of peers: %v\n", total)
     if len(rn.myVotes) == total { // polls are closed!
       rn.closePolls()
     }
@@ -229,7 +221,7 @@ func (rn *RaftNode) assembleElection() {
 			fmt.Println("assembleElection done correclty")
 		}
 	  timeoutCallback := func () {
-			fmt.Println("assembleElection didnt wor")
+			fmt.Println("assembleElection didnt work")
 	    rn.setNodeType(Candidate)
 	  }
 	  rn.pNode.broadcastWithTimeout(rn.generateMessageWithCommand(RequestVoteCommand),
@@ -240,8 +232,6 @@ func (rn *RaftNode) assembleElection() {
 func (rn *RaftNode) vote(candidateTerm int, candidateAddress string) {
   ans := rn.generateMessageWithCommand(VoteCommand)
 	fmt.Println("WILL VOTE")
-	fmt.Printf("my term: %v, msg term: %v, my last vote for: %v\n",
-    rn.currentTerm, candidateTerm, rn.votedFor)
 	if rn.currentTerm <= candidateTerm &&
       (rn.votedFor == "" || rn.votedFor == candidateAddress) {
 		ans.VoteGranted = candidateAddress

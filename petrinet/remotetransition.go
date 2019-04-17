@@ -27,11 +27,12 @@ type RemoteTransition struct {
 
 func convertToAddressArcsMap(raList []RemoteArc) map[string][]*RemoteArc {
 	ans := make(map[string][]*RemoteArc)
-	for _, inarc := range raList {
-		if _, ok := ans[inarc.Address]; !ok {
-			ans[inarc.Address] = []*RemoteArc{&inarc}
+	for _, currArc := range raList {
+		copy := currArc
+		if _, ok := ans[currArc.Address]; !ok {
+			ans[currArc.Address] = []*RemoteArc{&copy}
 		} else {
-			ans[inarc.Address] = append(ans[inarc.Address], &inarc)
+			ans[currArc.Address] = append(ans[currArc.Address], &copy)
 		}
 	}
 	return ans

@@ -1,6 +1,7 @@
 package petrinet
 
 import (
+	"fmt"
 	"errors"
 )
 
@@ -12,6 +13,24 @@ type Transition struct {
 	outArcs []arc
 	inhibitorArcs []arc
 }
+
+func (t Transition) String() string {
+	arcListString := func(list []arc) string {
+		ans := "["
+		for _, item := range list {
+			if ans != "[" {
+				ans += ", "
+			}
+			ans += item.String()
+		}
+		ans += "]"
+		return ans
+	}
+	return fmt.Sprintf(
+		"{ID: %v, priority: %v, inArcs: %v, outArcs: %v, inhibitorArcs: %v}",
+		t.ID, t.Priority, arcListString(t.inArcs), arcListString(t.outArcs), arcListString(t.inhibitorArcs))
+}
+
 
 func (t *Transition) canFire() bool {
 	ans := true

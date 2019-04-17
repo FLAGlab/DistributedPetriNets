@@ -214,10 +214,13 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		pn.verifiedRemoteAddrs = []string{}
 		pn.marks = make(map[string]map[int]*petrinet.RemoteArc)
 		rmtTransitionOption, ok := pn.remoteTransitionOptions[peerAddr][transition.ID]
+		fmt.Println("CHOSEN TRANSITION %v\nCHOSEN ADDR %v\n", transition, peerAddr)
 		if ok {
+			fmt.Println("WILL FIRE REMOTE TRANSITION")
 			copy := *rmtTransitionOption // get a copy
 			remoteTransition := &copy // pointer to the copy
 			remoteTransition.UpdateAddressByContext(pn.contextToAddrs, peerAddr)
+			fmt.Printf("REMOTE TRANSITION TO FIRE: %v\n", remoteTransition)
 			pn.chosenRemoteTransition = remoteTransition
 			askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
 			fmt.Println(askedAddrs)
@@ -228,6 +231,7 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 				pn.incStep() // FIRE_STEP
 			}
 		} else {
+			fmt.Println("THERE IS NO REMOTE TRANSITION TO FIRE")
 			// there's nothing remote to fire, skip to FIRE_STEP
 			pn.incStep() // RECEIVING_MARKS_STEP
 			pn.incStep() // FIRE_STEP
@@ -342,6 +346,7 @@ func (pn *petriNode) SendMessageByAddress(msgToSend petriMessage, peerAddr strin
 		fmt.Printf("Error dialing: %v\n", peerAddr)
 		return err
 	}
+	fmt.Printf("WILL SEND: %v\n", msgToSend)
 	return peer.SendMessage(msgToSend)
 }
 

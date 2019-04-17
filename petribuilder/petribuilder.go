@@ -57,7 +57,7 @@ func BuildPetriNet3() *petrinet.PetriNet {
 func BuildExperiment1(id int) *petrinet.PetriNet {
   p := petrinet.Init(id, "exp1")
 
-  p.AddPlace(1,0,"")
+  p.AddPlace(1,4,"")
   p.AddPlace(2,0,"")
   p.AddPlace(3,0,"")
   p.AddTransition(1, 1)
