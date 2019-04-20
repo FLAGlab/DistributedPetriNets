@@ -60,8 +60,10 @@ func (rn *RaftNode) setNodeType(nodeType NodeType) {
 		currTimeout = MinTimeout + getRand(MaxTimeout - MinTimeout)
     rn.pNode.resetStep()
 	} else {
-		rn.pNode.updateCtx(rn.generateBaseMessage())
-		rn.pNode.updateMaxPriority(rn.generateBaseMessage())
+		bmsg := rn.generateBaseMessage()
+		bmsg.AskedPriority = rn.pNode.petriNet.GetMaxPriority()
+		rn.pNode.updateCtx(bmsg)
+		rn.pNode.updateMaxPriority(bmsg)
 	}
 	if nodeType == Follower {
 		rn.pNode.resetLastMsgTo()

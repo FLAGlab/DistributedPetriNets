@@ -69,6 +69,11 @@ func (pn *PetriNet) GetPlace(id int) *Place {
   return pn.places[id]
 }
 
+func (pn *PetriNet) UpdatePriority(transitionID, priority int) {
+  pn.maxPriority = -1
+  pn.transitions[transitionID].Priority = priority
+}
+
 // FireTransitionByID fires a transition given its ID
 func (pn *PetriNet) FireTransitionByID(transitionID int) error {
   return pn.transitions[transitionID].fire()
@@ -205,13 +210,20 @@ func Init(_id int, context string) *PetriNet {
   return &PetriNet{
     ID: _id,
     places: make(map[int]*Place),
-    maxPriority: 0,
+    maxPriority: -1,
     Context: context,
     transitions: make(map[int]*Transition),
     remoteTransitions: make(map[int]*RemoteTransition)}
 }
 
 func (pn *PetriNet) GetMaxPriority() int {
+  if pn.maxPriority == -1 {
+    for _, tr := range pn.transitions {
+      if pn.maxPriority < tr.Priority {
+        pn.maxPriority = tr.Priority
+      }
+    }
+  }
   return pn.maxPriority
 }
 

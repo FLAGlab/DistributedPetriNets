@@ -1,6 +1,5 @@
 package petrinet
 
-
 /*
 Cases:
 - Local transition to remote place (IN, inhib or normal)
@@ -66,7 +65,6 @@ func (t *RemoteTransition) GetInArcsByAddrs() map[string][]*RemoteArc {
 func (t *RemoteTransition) GetOutArcsByAddrs() map[string][]*RemoteArc {
 	return convertToAddressArcsMap(t.OutArcs)
 }
-
 
 // GetPlaceIDsByAddrs gets a map from address to list of place ids needed from that address
 func (t *RemoteTransition) GetPlaceIDsByAddrs() map[string][]int {

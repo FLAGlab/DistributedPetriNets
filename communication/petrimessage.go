@@ -3,6 +3,7 @@ package communication
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 
 	"github.com/FLAGlab/DCoPN/petrinet"
 	"github.com/perlin-network/noise"
@@ -44,6 +45,12 @@ type petriMessage struct {
 	PetriContext string
 	AskedPriority int
 	imNew bool
+}
+
+func (p petriMessage) String() string {
+	return fmt.Sprintf("{Command: %v, Address: %v, Term: %v, FromType: %v, VoteGranted: %v, Transitions: %v, RemoteTransitions: %v, RemoteArcs: %v, OpType: %v, PetriContext: %v, AskedPriority: %v, imNew: %v}",
+	p.Command, p.Address, p.Term, p.FromType, p.VoteGranted, p.Transitions, p.RemoteTransitions, p.RemoteArcs, p.OpType,
+	p.PetriContext, p.AskedPriority, p.imNew)
 }
 
 func (petriMessage) Read(reader payload.Reader) (noise.Message, error) {

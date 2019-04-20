@@ -90,7 +90,7 @@ func (pn *petriNode) resetLastMsgTo() {
 func (pn *petriNode) initTransitionOptions() {
 	pn.transitionOptions = make(map[string][]*petrinet.Transition)
 	pn.remoteTransitionOptions = make(map[string]map[int]*petrinet.RemoteTransition)
-	pn.transitionOptions[pn.node.ExternalAddress()], pn.remoteTransitionOptions[pn.node.ExternalAddress()] = pn.petriNet.GetTransitionOptions()
+	pn.transitionOptions[pn.node.ExternalAddress()], pn.remoteTransitionOptions[pn.node.ExternalAddress()] = pn.petriNet.GetTransitionOptionsByPriority(pn.priorityToAsk)
 }
 
 func (pn *petriNode) addTransitionOption(key string, options []*petrinet.Transition, remote map[int]*petrinet.RemoteTransition) int {
@@ -100,12 +100,14 @@ func (pn *petriNode) addTransitionOption(key string, options []*petrinet.Transit
 }
 
 func (pn *petriNode) updateMaxPriority(pMsg petriMessage) {
+	fmt.Printf("WILL UPDATE MAX PRIORITY: %v\n", pMsg)
 	if pMsg.imNew {
 		pn.priorityToAsk = 0
 	}
 	if pMsg.AskedPriority > pn.maxPriority {
 		pn.maxPriority = pMsg.AskedPriority
 	}
+	fmt.Printf("MAX PRIORITY AFTER %v\n", pn.maxPriority)
 }
 
 func (pn *petriNode) getTransition(pMsg petriMessage) {
@@ -174,6 +176,9 @@ func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, ba
 // if transition option is not valid, remove it
 func (pn *petriNode) removeTransitionOption(addrs string, transition *petrinet.Transition) {
 	// delete transition from option list
+	fmt.Println("WILL DELETE TRANSITION OPTION")
+	fmt.Printf("Transition options before: %v\n", pn.transitionOptions)
+	fmt.Printf("Remote transition options before: %v\n", pn.remoteTransitionOptions)
 	numElem := len(pn.transitionOptions[addrs])
 	if numElem - 1 == 0 {
 		pn.transitionOptions[addrs] = []*petrinet.Transition{}
@@ -192,6 +197,9 @@ func (pn *petriNode) removeTransitionOption(addrs string, transition *petrinet.T
 	}
 	// delete remote transition from de transition
 	delete(pn.remoteTransitionOptions[addrs], transition.ID)
+	fmt.Printf("Transition options after: %v\n", pn.transitionOptions)
+	fmt.Printf("Remote transition options after: %v\n", pn.remoteTransitionOptions)
+	fmt.Println("DONE DELETING TRANSITION OPTION")
 }
 
 func (pn *petriNode) saveMarks(addr string, placeID int, rmtArc *petrinet.RemoteArc) {
@@ -226,10 +234,12 @@ func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 	if len(pn.addressMissing) == 0 {
 		if !pn.validateRemoteTransitionMarks() {
 			// transition wasn't ready to fire, remove from options and try again
+			fmt.Println("TRANSITION WASNT READY TO FIRE, WILL GO TO PREPARE_FIRE_STEP")
 			pn.removeTransitionOption(pn.chosenTransitionAddress, pn.chosenTransition)
 			pn.step = PREPARE_FIRE_STEP
 			// save chosenTransition priority
 		} else {
+			fmt.Println("TRANSITION READY TO FIRE, WILL GO TO FIRE_STEP")
 			pn.incStep() // FIRE_STEP
 		}
 	}
@@ -243,11 +253,14 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		fmt.Println("_NO TRANSITION TO SELECT")
 		pn.resetStep()
 		// will retry with next priority
+		fmt.Printf("MAX PRIORITY: %v\n", pn.maxPriority)
+		fmt.Printf("PRIORITY TO ASK B4: %v\n", pn.priorityToAsk)
 		if pn.priorityToAsk < pn.maxPriority {
 			pn.priorityToAsk++
 		} else {
 			pn.priorityToAsk = 0
 		}
+		fmt.Printf("PRIORITY TO ASK AFTER: %v\n", pn.priorityToAsk)
 	} else {
 		pn.chosenTransition = transition
 		pn.chosenTransitionAddress = peerAddr
@@ -259,9 +272,10 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 			fmt.Println("WILL FIRE REMOTE TRANSITION")
 			copy := *rmtTransitionOption // get a copy
 			remoteTransition := &copy // pointer to the copy
+			fmt.Printf("REMOTE TRANSITION TO FIRE B4 UPDATE BY CTX: %v\n", remoteTransition)
 			remoteTransition.UpdateAddressByContext(pn.contextToAddrs, peerAddr)
 			fmt.Printf("CTX TO ADDRS: %v\n", pn.contextToAddrs)
-			fmt.Printf("REMOTE TRANSITION TO FIRE: %v\n", remoteTransition)
+			fmt.Printf("REMOTE TRANSITION TO FIRE AFTER UPDATE BY CTX: %v\n", remoteTransition)
 			pn.chosenRemoteTransition = remoteTransition
 			askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
 			fmt.Println(askedAddrs)
@@ -295,6 +309,7 @@ func (pn *petriNode) validateRemoteTransitionMarks() bool {
 			if !exists {
 				continue
 			}
+			fmt.Printf("HERE Place %v: %v marks. Arc weight: %v.\n", currArc.PlaceID, place.Marks, currArc.Weight)
 			ans = ans && comp(place.Marks, currArc.Weight)
 		}
 	}

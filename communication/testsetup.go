@@ -80,6 +80,27 @@ func simpleTestPetriNet(id int, ctx string) *petrinet.PetriNet {
   return pn
 }
 
+func experiment1TestPetriNet(id int, ctx string) *petrinet.PetriNet {
+  p := petrinet.Init(id, ctx)
+
+  p.AddPlace(1,1,"")
+  p.AddPlace(2,0,"")
+  p.AddPlace(3,0,"")
+  p.AddTransition(1, 1)
+  p.AddTransition(3, 1)
+  p.AddTransition(2, 0)
+  p.AddTransition(4, 0)
+  p.AddRemoteTransition(2)
+  p.AddRemoteInhibitorArc(2, 2, 1, ctx)
+  p.AddInArc(1, 2, 1)
+  p.AddInArc(3, 4, 1)
+  p.AddInArc(2, 4, 1)
+  p.AddOutArc(1, 1, 1)
+  p.AddOutArc(2, 2, 1)
+  p.AddOutArc(3, 3, 1)
+  return p
+}
+
 func endConnectionsMap(m *connectionsMap) {
   for _, peer := range m.nodes {
     peer.rftNode.close()
