@@ -14,8 +14,6 @@ type myTestPeerNode struct {
 }
 
 func (cpeer myTestPeerNode) SendMessage(pMsg petriMessage) error {
-  fmt.Printf("Sending test message to %v\n", cpeer.address)
-  defer fmt.Println("Done sending test message")
   if cpeer.shouldFail {
     return errors.New("Test error")
   }
@@ -43,13 +41,11 @@ func (cn *myTestCommunicationNode) CountPeers() int {
 
 func (cn *myTestCommunicationNode) Broadcast(pMsg petriMessage) []error {
   var errs []error
-  fmt.Println("Doing test broadcast")
   for _, peer := range cn.connections.nodes {
     if peer.address != cn.ExternalAddress() {
       errs = append(errs, peer.SendMessage(pMsg))
     }
   }
-  fmt.Printf("Done test broadcast")
 	return errs
 }
 
@@ -104,10 +100,11 @@ func setUpTestPetriNodes(pnets []*petrinet.PetriNet, leaderId int) (*connections
   for _, pnet := range pnets {
     addr := fmt.Sprintf("addr_%v", pnet.ID)
     myTestComm := &myTestCommunicationNode{connections: &connections}
+    testPeer := &myTestPeerNode{addr, nil, false}
+    myTestComm.self = testPeer
     pnNode := InitPetriNode(myTestComm, pnet)
     rn := InitRaftNode(pnNode, leaderId == pnet.ID)
-    testPeer := &myTestPeerNode{addr, rn, false}
-    myTestComm.self = testPeer
+    testPeer.rftNode = rn
     connections.nodes[addr] = testPeer
     if leaderId == pnet.ID {
       leaderPeer = testPeer

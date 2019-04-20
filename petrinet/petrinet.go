@@ -75,15 +75,9 @@ func (pn *PetriNet) FireTransitionByID(transitionID int) error {
 }
 
 func (pn *PetriNet) CopyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
-  fmt.Println("WILL COPY PLACE MARKS TO REMOTE ARC METH")
-  fmt.Printf("BEFORE: %v\n", remoteArcs)
   for i, rmtArc := range remoteArcs {
-    fmt.Printf("CURRENT PLACE: %v, PLACE MARKS: %v\n", rmtArc.PlaceID, pn.places[rmtArc.PlaceID].marks)
-    fmt.Printf("CURR: %v\n", remoteArcs[i])
     remoteArcs[i].Marks = pn.places[rmtArc.PlaceID].marks
-    fmt.Printf("CURR AFTER: %v\n", remoteArcs[i])
   }
-  fmt.Printf("AFTER: %v\n", remoteArcs)
 }
 
 // AddMarksToPlaces adds weight (pos or neg) to specified places

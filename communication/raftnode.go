@@ -59,6 +59,9 @@ func (rn *RaftNode) setNodeType(nodeType NodeType) {
 	if nodeType != Leader {
 		currTimeout = MinTimeout + getRand(MaxTimeout - MinTimeout)
     rn.pNode.resetStep()
+	} else {
+		rn.pNode.updateCtx(rn.generateBaseMessage())
+		rn.pNode.updateMaxPriority(rn.generateBaseMessage())
 	}
 	if nodeType == Follower {
 		rn.pNode.resetLastMsgTo()

@@ -156,9 +156,11 @@ func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, ba
 		}
 		var err error
 		if rmtAddr == pn.node.ExternalAddress() {
+			pn.petriNet.CopyPlaceMarksToRemoteArc(baseMsg2.RemoteArcs)
 			for _, rmtArc := range baseMsg2.RemoteArcs {
-				pn.saveMarks(rmtAddr, rmtArc.PlaceID, rmtArc)
+				pn.saveMarks(rmtAddr, rmtArc.PlaceID, rmtArc) // ADDR, PLACE ID, RMT ARC
 			}
+			pn.verifiedRemoteAddrs = append(pn.verifiedRemoteAddrs, rmtAddr)
 		} else {
 			err = pn.SendMessageByAddress(baseMsg2, rmtAddr)
 			if err == nil {
@@ -258,6 +260,7 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 			copy := *rmtTransitionOption // get a copy
 			remoteTransition := &copy // pointer to the copy
 			remoteTransition.UpdateAddressByContext(pn.contextToAddrs, peerAddr)
+			fmt.Printf("CTX TO ADDRS: %v\n", pn.contextToAddrs)
 			fmt.Printf("REMOTE TRANSITION TO FIRE: %v\n", remoteTransition)
 			pn.chosenRemoteTransition = remoteTransition
 			askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
@@ -295,8 +298,10 @@ func (pn *petriNode) validateRemoteTransitionMarks() bool {
 			ans = ans && comp(place.Marks, currArc.Weight)
 		}
 	}
-	helperFunc(rmtTransition.InArcs, func(a, b int) bool { return a >= b})
-	helperFunc(rmtTransition.InhibitorArcs, func(a, b int) bool { return a < b})
+	if rmtTransition != nil {
+		helperFunc(rmtTransition.InArcs, func(a, b int) bool { return a >= b})
+		helperFunc(rmtTransition.InhibitorArcs, func(a, b int) bool { return a < b})
+	}
 	return ans
 }
 
@@ -304,10 +309,10 @@ func (pn *petriNode) validateRemoteTransitionMarks() bool {
 func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, baseMsg petriMessage) {
 	if t != nil {
 		fmt.Println("WILL FIRE REMOTE TRANSITION METH")
-		helperFunc := func(opType petrinet.OperationType, addrToArcMap map[string][]*petrinet.RemoteArc) {
+		helperFunc := func(opType petrinet.OperationType, addrToArcMap map[string][]*petrinet.RemoteArc, verifiedAddrs []string) {
 			fmt.Println("RUNNING HELPER FUNC")
-			fmt.Printf("VERIFIED REMOTE ADDRS: %v\n", pn.verifiedRemoteAddrs)
-			for _, addr := range pn.verifiedRemoteAddrs {
+			fmt.Printf("VERIFIED REMOTE ADDRS: %v\n", verifiedAddrs)
+			for _, addr := range verifiedAddrs {
 				baseMsg2 := baseMsg
 				baseMsg2.Command = AddToPlacesCommand
 				baseMsg2.RemoteArcs = addrToArcMap[addr]
@@ -329,12 +334,24 @@ func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, baseMsg 
 		placesToReceive := t.GetOutArcsByAddrs()
 		fmt.Printf("REMOTE IN ARCS TO FIRE: %v\n", placesToFire)
 		fmt.Printf("REMOTE OUT ARCS TO FIRE: %v\n", placesToReceive)
-		helperFunc(petrinet.SUBSTRACTION, placesToFire)
-		helperFunc(petrinet.ADDITION, placesToReceive)
+		helperFunc(petrinet.SUBSTRACTION, placesToFire, pn.verifiedRemoteAddrs)
+		var verifiedOut []string
+		for key := range placesToReceive {
+			verifiedOut = append(verifiedOut, key) // for out I dont care if its verified, do all
+		}
+		helperFunc(petrinet.ADDITION, placesToReceive, verifiedOut)
 	}
 }
 
 func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
+	if !pn.validateRemoteTransitionMarks() {
+		// transition wasn't ready to fire, remove from options and try again
+		pn.removeTransitionOption(pn.chosenTransitionAddress, pn.chosenTransition)
+		pn.step = PREPARE_FIRE_STEP
+		// save chosenTransition priority
+		fmt.Println("Didnt fire because wasnt ready")
+		return nil
+	}
 	fmt.Println("WILL FIRE TRANSITION METH")
 	transition := pn.chosenTransition
 	peerAddr := pn.chosenTransitionAddress
