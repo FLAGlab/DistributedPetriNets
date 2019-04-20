@@ -1,13 +1,12 @@
 package communication
 
 import (
+	"flag"
 	"fmt"
 	"math"
 	"time"
 
 	"github.com/FLAGlab/DCoPN/petrinet"
-	"github.com/perlin-network/noise"
-	"github.com/perlin-network/noise/skademlia"
 )
 
 type LeaderStep int
@@ -21,8 +20,19 @@ const (
 	PRINT_STEP LeaderStep = 5
 )
 
+type PeerNode interface {
+	SendMessage(pMsg petriMessage) error
+}
+
+type CommunicationNode interface {
+	ExternalAddress() string
+	Dial(address string) (PeerNode, error)
+	CountPeers() int
+	Broadcast(pMsg petriMessage) []error
+}
+
 type petriNode struct {
-	node *noise.Node
+	node CommunicationNode //*noise.Node
 	petriNet *petrinet.PetriNet
 	step LeaderStep
 	timeoutCount int
@@ -37,14 +47,32 @@ type petriNode struct {
 	marks map[string]map[int]*petrinet.RemoteArc
 	contextToAddrs map[string][]string
 	addrsToContext map[string]string
+	priorityToAsk int
+	maxPriority int
+	lastMsgTo string
+	transitionPicker RandomTransitionPicker
 }
 
-func InitPetriNode(node *noise.Node, petriNet *petrinet.PetriNet) *petriNode {
+type RandomTransitionPicker func(map[string][]*petrinet.Transition) (*petrinet.Transition, string)
+
+func InitPetriNode(node CommunicationNode, petriNet *petrinet.PetriNet) *petriNode {
 	return &petriNode{
 		node: node,
 		petriNet: petriNet,
+		maxPriority: petriNet.GetMaxPriority(),
 		contextToAddrs: make(map[string][]string),
-		addrsToContext: make(map[string]string)}
+		addrsToContext: make(map[string]string),
+		transitionPicker: func(options map[string][]*petrinet.Transition) (*petrinet.Transition, string) {
+			var indexToKey []string
+			for key := range options {
+				indexToKey = append(indexToKey, key)
+			}
+			pnNodeIndex := getRand(len(options))
+			chosenKey := indexToKey[pnNodeIndex]
+			tOptions := options[chosenKey]
+			transitionIndex := getRand(len(tOptions))
+			return tOptions[transitionIndex], chosenKey
+		}}
 }
 
 func (pn *petriNode) incStep() {
@@ -53,6 +81,10 @@ func (pn *petriNode) incStep() {
 
 func (pn *petriNode) resetStep() {
 	pn.step = ASK_STEP
+}
+
+func (pn *petriNode) resetLastMsgTo() {
+	pn.lastMsgTo = ""
 }
 
 func (pn *petriNode) initTransitionOptions() {
@@ -67,6 +99,15 @@ func (pn *petriNode) addTransitionOption(key string, options []*petrinet.Transit
 	return len(pn.transitionOptions)
 }
 
+func (pn *petriNode) updateMaxPriority(pMsg petriMessage) {
+	if pMsg.imNew {
+		pn.priorityToAsk = 0
+	}
+	if pMsg.AskedPriority > pn.maxPriority {
+		pn.maxPriority = pMsg.AskedPriority
+	}
+}
+
 func (pn *petriNode) getTransition(pMsg petriMessage) {
 	if pMsg.Command != TransitionCommand {
 		fmt.Printf("Expected transition, received something else: %v HERE\n", pMsg.Command)
@@ -76,7 +117,7 @@ func (pn *petriNode) getTransition(pMsg petriMessage) {
 	fmt.Printf("HERE: %v\n", pMsg)
 	fmt.Printf("HERE: %v\n", pn.transitionOptions)
 	numDone := pn.addTransitionOption(pMsg.Address, pMsg.Transitions, pMsg.RemoteTransitions)
-	expected := len(skademlia.Table(pn.node).GetPeers()) + 1 // plus me
+	expected := pn.node.CountPeers() + 1 // including me
 	if numDone == expected {
 		pn.incStep()
 	}
@@ -89,25 +130,15 @@ func (pn *petriNode) selectTransition() (*petrinet.Transition, string) {
 			minPriority = value[0].Priority
 		}
 	}
-	indexToKey := make(map[int]string)
-	initial := 0
 	for key, value := range pn.transitionOptions {
 		if len(value) == 0 || value[0].Priority != minPriority {
 			delete(pn.transitionOptions, key)
-		} else {
-			indexToKey[initial] = key
-			initial++
 		}
 	}
-
-	if initial == 0 { // there is no transition to pick
+	if len(pn.transitionOptions) == 0 { // there is no transition to pick
 		return nil, ""
 	}
-	pnNodeIndex := getRand(initial)
-	chosenKey := indexToKey[pnNodeIndex]
-	options := pn.transitionOptions[chosenKey]
-	transitionIndex := getRand(len(options))
-	return options[transitionIndex], chosenKey
+	return pn.transitionPicker(pn.transitionOptions)
 }
 
 func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, baseMsg petriMessage) map[string]bool {
@@ -195,6 +226,7 @@ func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 			// transition wasn't ready to fire, remove from options and try again
 			pn.removeTransitionOption(pn.chosenTransitionAddress, pn.chosenTransition)
 			pn.step = PREPARE_FIRE_STEP
+			// save chosenTransition priority
 		} else {
 			pn.incStep() // FIRE_STEP
 		}
@@ -205,16 +237,22 @@ func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 	fmt.Println("PRERAREFIRE METH CALLED")
 	transition, peerAddr := pn.selectTransition()
-	pn.chosenTransition = transition
-	pn.chosenTransitionAddress = peerAddr
 	if transition == nil {
 		fmt.Println("_NO TRANSITION TO SELECT")
 		pn.resetStep()
+		// will retry with next priority
+		if pn.priorityToAsk < pn.maxPriority {
+			pn.priorityToAsk++
+		} else {
+			pn.priorityToAsk = 0
+		}
 	} else {
+		pn.chosenTransition = transition
+		pn.chosenTransitionAddress = peerAddr
 		pn.verifiedRemoteAddrs = []string{}
 		pn.marks = make(map[string]map[int]*petrinet.RemoteArc)
 		rmtTransitionOption, ok := pn.remoteTransitionOptions[peerAddr][transition.ID]
-		fmt.Println("CHOSEN TRANSITION %v\nCHOSEN ADDR %v\n", transition, peerAddr)
+		fmt.Printf("CHOSEN TRANSITION %v\nCHOSEN ADDR %v\n", transition, peerAddr)
 		if ok {
 			fmt.Println("WILL FIRE REMOTE TRANSITION")
 			copy := *rmtTransitionOption // get a copy
@@ -320,6 +358,7 @@ func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
 		fmt.Println("NO ERROR, WILL FIRE REMOTE TRANSITION")
 		pn.fireRemoteTransition(remoteTransition, baseMsg) // Fire remote transition
 		pn.incStep()
+		pn.priorityToAsk = 0 // reset for next iteration
 	} else {
 		pn.resetStep()
 	}
@@ -346,6 +385,10 @@ func (pn *petriNode) SendMessageByAddress(msgToSend petriMessage, peerAddr strin
 		fmt.Printf("Error dialing: %v\n", peerAddr)
 		return err
 	}
+	if peerAddr != pn.lastMsgTo {
+		msgToSend.imNew = true
+		pn.lastMsgTo = peerAddr
+	}
 	fmt.Printf("WILL SEND: %v\n", msgToSend)
 	return peer.SendMessage(msgToSend)
 }
@@ -353,12 +396,14 @@ func (pn *petriNode) SendMessageByAddress(msgToSend petriMessage, peerAddr strin
 func (pn *petriNode) showPetriNetCurrentState() {
 	fmt.Println("Will print petri net")
 	fmt.Printf("%v\n", pn.petriNet)
-	time.Sleep(time.Duration(humanTimeout) * time.Millisecond)
+	if flag.Lookup("test.v") == nil {
+		time.Sleep(time.Duration(humanTimeout) * time.Millisecond)
+  }
 }
 
 func (pn *petriNode) printPetriNet(baseMsg petriMessage) {
 	baseMsg.Command = PrintCommand
-	skademlia.Broadcast(pn.node, baseMsg)
+	pn.node.Broadcast(baseMsg)
 	pn.showPetriNetCurrentState()
 	pn.incStep()
 }
@@ -368,7 +413,8 @@ func (pn *petriNode) broadcastWithTimeout(msg petriMessage, successCallback, tim
 	defer close(errChan)
 	go func() {
 		fmt.Printf("Doing broadcast of %v...\n", msg)
-		err := skademlia.Broadcast(pn.node, msg)
+		// err := skademlia.Broadcast(pn.node, msg)
+		err := pn.node.Broadcast(msg)
 		fmt.Println("Broadcast sent!")
 		errChan <- err
 	}()
@@ -388,7 +434,8 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 	switch pMsg.Command {
 	case TransitionCommand:
 		baseMsg.Command = TransitionCommand
-		baseMsg.Transitions, baseMsg.RemoteTransitions = pn.petriNet.GetTransitionOptions()
+		baseMsg.Transitions, baseMsg.RemoteTransitions = pn.petriNet.GetTransitionOptionsByPriority(pMsg.AskedPriority)
+		baseMsg.AskedPriority = pn.petriNet.GetMaxPriority()
 		pn.SendMessageByAddress(baseMsg, pMsg.Address)
 	case MarksCommand:
 		baseMsg.Command = MarksCommand

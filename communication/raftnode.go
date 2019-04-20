@@ -3,8 +3,6 @@ package communication
 import (
 	"fmt"
 	"time"
-
-	"github.com/perlin-network/noise/skademlia"
 )
 
 // MinTimeout the minimum timeout for raft
@@ -36,11 +34,12 @@ type RaftNode struct {
   pNode *petriNode
 	timeoutCount int
 	votedFor string
+	run bool
 }
 
 // InitRaftNode gets a new raft node that contains the petri node
 func InitRaftNode(pNode *petriNode, isLeader bool) *RaftNode {
-  rn := &RaftNode {pNode: pNode, pMsg: make(chan petriMessage)}
+  rn := &RaftNode {pNode: pNode, pMsg: make(chan petriMessage), run: true}
 	if isLeader {
 		rn.setNodeType(Leader)
 	} else {
@@ -51,6 +50,7 @@ func InitRaftNode(pNode *petriNode, isLeader bool) *RaftNode {
 
 func (rn *RaftNode) close() {
 	close(rn.pMsg)
+	rn.run = false
 }
 
 func (rn *RaftNode) setNodeType(nodeType NodeType) {
@@ -60,40 +60,59 @@ func (rn *RaftNode) setNodeType(nodeType NodeType) {
 		currTimeout = MinTimeout + getRand(MaxTimeout - MinTimeout)
     rn.pNode.resetStep()
 	}
+	if nodeType == Follower {
+		rn.pNode.resetLastMsgTo()
+	}
 	rn.myVotes = make(map[string]string)
 	rn.timeoutCount = currTimeout
 	rn.pNode.timeoutCount = currTimeout
 	fmt.Printf("TIMEOUT %v FOR TYPE %v\n", rn.timeoutCount + humanTimeout, nodeType)
 }
 
+func (rn *RaftNode) ask() {
+	fmt.Println("_ASK")
+	rn.pNode.ask(rn.generateBaseMessage())
+	total := rn.pNode.node.CountPeers() + 1 // plus me
+	if total == 1 && rn.pNode.step == RECEIVING_TRANSITIONS_STEP {
+		rn.pNode.incStep() // skip RECEIVING_TRANSITIONS_STEP if Im the only one
+	}
+}
+
+func (rn *RaftNode) prepareFire() {
+	fmt.Println("_PREPARE FIRE")
+	rn.pNode.prepareFire(rn.generateBaseMessage())
+	total := rn.pNode.node.CountPeers() + 1 // plus me
+	if total == 1 && rn.pNode.step == RECEIVING_MARKS_STEP {
+		rn.pNode.incStep() // skip RECEIVING_MARKS_STEP if Im the only one
+	}
+}
+
+func (rn *RaftNode) fire() {
+	fmt.Println("_FIRE")
+	rn.pNode.fireTransition(rn.generateBaseMessage())
+}
+
+func (rn *RaftNode) print() {
+	fmt.Println("_PRINT")
+	rn.pNode.printPetriNet(rn.generateBaseMessage())
+}
+
 // Listen Function that listens to the channel
 func (rn *RaftNode) Listen() {
-  for {
+  for rn.run {
 		fmt.Printf("STARTED ITERATION AS %v\n", rn.nodeType)
     if rn.nodeType == Leader {
       for rn.pNode.step != RECEIVING_TRANSITIONS_STEP && rn.pNode.step != RECEIVING_MARKS_STEP {
 				fmt.Printf("IS LEADER AT STEP: %v\n", rn.pNode.step)
         switch rn.pNode.step {
         case ASK_STEP:
-					fmt.Println("_ASK")
-          rn.pNode.ask(rn.generateBaseMessage())
-					total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
-					if total == 1 && rn.pNode.step == RECEIVING_TRANSITIONS_STEP {
-						rn.pNode.incStep() // skip RECEIVING_TRANSITIONS_STEP if Im the only one
-					}
+					rn.ask()
         case PREPARE_FIRE_STEP:
-					fmt.Println("_PREPARE FIRE")
-					rn.pNode.prepareFire(rn.generateBaseMessage())
-					total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
-					if total == 1 && rn.pNode.step == RECEIVING_MARKS_STEP {
-						rn.pNode.incStep() // skip RECEIVING_MARKS_STEP if Im the only one
-					}
+					rn.prepareFire()
 				case FIRE_STEP:
-					fmt.Println("_FIRE")
-					rn.pNode.fireTransition(rn.generateBaseMessage())
+					rn.fire()
         case PRINT_STEP:
-					fmt.Println("_PRINT")
-          rn.pNode.printPetriNet(rn.generateBaseMessage())
+					rn.print()
         }
       } // TODO take into account timeout
     }
@@ -133,6 +152,7 @@ func (rn *RaftNode) processLeader(pMsg petriMessage) {
 		}
   } else if pMsg.Term == rn.currentTerm {
 		rn.pNode.updateCtx(pMsg)
+		rn.pNode.updateMaxPriority(pMsg)
 		switch rn.pNode.step {
 		case RECEIVING_TRANSITIONS_STEP:
     	rn.pNode.getTransition(pMsg)
@@ -199,7 +219,7 @@ func (rn *RaftNode) processCandidate(pMsg petriMessage) {
   } else if pMsg.Command == VoteCommand { // its a vote
     fmt.Printf("Received %v vote from: %v\n", pMsg.VoteGranted, pMsg.Address)
     rn.myVotes[pMsg.Address] = pMsg.VoteGranted
-    total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
+    total := rn.pNode.node.CountPeers() + 1 // plus me
     fmt.Printf("Total of votes: %v\n", rn.myVotes)
     if len(rn.myVotes) == total { // polls are closed!
       rn.closePolls()
@@ -213,7 +233,7 @@ func (rn *RaftNode) assembleElection() {
   rn.myVotes[myAddr] = myAddr
   rn.currentTerm++
   rn.votedFor = myAddr
-	total := len(skademlia.Table(rn.pNode.node).GetPeers()) + 1 // plus me
+	total := rn.pNode.node.CountPeers() + 1 // plus me
 	if len(rn.myVotes) == total { // polls are closed!
 		rn.closePolls()
 	} else {
@@ -249,7 +269,8 @@ func (rn *RaftNode) generateBaseMessage() petriMessage {
 		Address: rn.pNode.node.ExternalAddress(),
 		Term: rn.currentTerm,
 		PetriContext: rn.pNode.petriNet.Context,
-		FromType: rn.nodeType}
+		FromType: rn.nodeType,
+		AskedPriority: rn.pNode.priorityToAsk}
 }
 
 func (rn *RaftNode) generateMessageWithCommand(command CommandType) petriMessage {

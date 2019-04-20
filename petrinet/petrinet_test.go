@@ -5,6 +5,20 @@ import (
   "testing"
 )
 
+func TestGetMaxPriority(t *testing.T) {
+  errorMsg := "Expected max priority %v but was %v"
+  pn := Init(1, "ctx1")
+  pn.AddTransition(1, 2)
+  if pn.GetMaxPriority() != 2 {
+    t.Errorf(errorMsg, 2, pn.GetMaxPriority())
+  }
+  pn.AddTransition(2, 5)
+  pn.AddTransition(2, 3)
+  if pn.GetMaxPriority() != 5 {
+    t.Errorf(errorMsg, 5, pn.GetMaxPriority())
+  }
+}
+
 func TestFireTransitionByID(t *testing.T) {
   pn := Init(1, "ctx1")
   pn.AddTransition(3, 2)
@@ -90,7 +104,7 @@ func TestAddMarksToPlaces(t *testing.T) {
   }
 }
 
-func TestGetTransitionOptions(t *testing.T) {
+func TestGetTransitionOptionsByPriority(t *testing.T) {
   pn := Init(1, "ctx1")
   pn.AddTransition(1, 0)
   pn.AddTransition(2, 0)
@@ -99,9 +113,10 @@ func TestGetTransitionOptions(t *testing.T) {
   pn.AddTransition(5, 2)
   pn.AddTransition(6, 2)
   pn.AddTransition(7, 2)
-  tList, rmtList := pn.GetTransitionOptions()
+  tList, rmtList := pn.GetTransitionOptionsByPriority(0)
+
   if len(rmtList) != 0 {
-    t.Errorf("There should not me any remote transitions on the options: %v", rmtList)
+    t.Errorf("There should not me any remote transitions on the option: %v", rmtList)
   }
   if len(tList) != 3 {
     t.Errorf("Transitions 1, 2 and 4 should be on the list: %v", tList)
@@ -123,13 +138,76 @@ func TestGetTransitionOptions(t *testing.T) {
   expectedIds[2] = true
   expectedIds[4] = true
   expectedFuncCheck(tList, expectedIds)
+
+  tList, rmtList = pn.GetTransitionOptionsByPriority(1)
+  expectedIds[3] = true
+  expectedFuncCheck(tList, expectedIds)
+  // Add remote arc for transition 5 and 6
+  pn.AddRemoteTransition(5)
+  pn.AddRemoteTransition(6)
+  pn.AddRemoteInArc(1, 5, 1, "testCtx")
+  pn.AddRemoteInArc(1, 6, 1, "testCtx")
+  tList, rmtList = pn.GetTransitionOptionsByPriority(2)
+  expectedIds[5] = true
+  expectedIds[6] = true
+  expectedIds[7] = true
+  expectedFuncCheck(tList, expectedIds)
+  expectedIds[5] = true
+  expectedIds[6] = true
+  if len(rmtList) != 2 {
+    t.Errorf("Remote arcs list should have 2 remote arcs but had %v", rmtList)
+  } else {
+    _, ok := rmtList[5]
+    if !ok {
+      t.Error("Remote transition 5 should exist")
+    }
+    _, ok = rmtList[6]
+    if !ok {
+      t.Error("Remote transition 6 should exist")
+    }
+  }
+}
+
+func TestGetTransitionOptions(t *testing.T) {
+  pn := Init(1, "ctx1")
+  pn.AddTransition(1, 0)
+  pn.AddTransition(2, 0)
+  pn.AddTransition(3, 1)
+  pn.AddTransition(4, 0)
+  pn.AddTransition(5, 2)
+  pn.AddTransition(6, 2)
+  pn.AddTransition(7, 2)
+  pn.AddPlace(4, 0, "")
+  pn.AddInArc(4, 4, 2)
+
+  tList, rmtList := pn.GetTransitionOptions()
+  if len(rmtList) != 0 {
+    t.Errorf("There should not me any remote transitions on the options: %v", rmtList)
+  }
+  if len(tList) != 2 {
+    t.Errorf("Transitions 1, and 2 should be on the list: %v", tList)
+  }
+  expectedFuncCheck := func (list []*Transition, expected map[int]bool) {
+    for _, tr := range list {
+      _, ok := expected[tr.ID]
+      if !ok {
+        t.Errorf("Got transition %v that wasn't expected", tr)
+      }
+      delete(expected, tr.ID)
+    }
+    if len(expected) > 0 {
+      t.Errorf("Expected to find %v but didnt", expected)
+    }
+  }
+  expectedIds := make(map[int]bool)
+  expectedIds[1] = true
+  expectedIds[2] = true
+  expectedFuncCheck(tList, expectedIds)
   // make all of priority 0 not able to fire
   pn.AddPlace(1, 0, "")
   pn.AddPlace(2, 0, "")
-  pn.AddPlace(3, 0, "")
   pn.AddInArc(1, 1, 2)
   pn.AddInArc(2, 2, 2)
-  pn.AddInArc(3, 4, 2)
   tList, rmtList = pn.GetTransitionOptions()
   expectedIds[3] = true
   expectedFuncCheck(tList, expectedIds)
@@ -144,6 +222,32 @@ func TestGetTransitionOptions(t *testing.T) {
   expectedIds[6] = true
   expectedIds[7] = true
   expectedFuncCheck(tList, expectedIds)
+  expectedIds[5] = true
+  expectedIds[6] = true
+  if len(rmtList) != 2 {
+    t.Errorf("Remote arcs list should have 2 remote arcs but had %v", rmtList)
+  } else {
+    _, ok := rmtList[5]
+    if !ok {
+      t.Error("Remote transition 5 should exist")
+    }
+    _, ok = rmtList[6]
+    if !ok {
+      t.Error("Remote transition 6 should exist")
+    }
+  }
+}
+
+func TestGetRemoteTransitionsFromTransitions(t *testing.T) {
+  pn := Init(1, "ctx1")
+  pn.AddTransition(5, 2)
+  pn.AddTransition(6, 2)
+  pn.AddRemoteTransition(5)
+  pn.AddRemoteTransition(6)
+  pn.AddRemoteInArc(1, 5, 1, "testCtx")
+  pn.AddRemoteInArc(1, 6, 1, "testCtx")
+  rmtList := pn.getRemoteTransitionsFromTransitions([]*Transition{pn.transitions[5], pn.transitions[6]})
+  expectedIds := make(map[int]bool)
   expectedIds[5] = true
   expectedIds[6] = true
   if len(rmtList) != 2 {

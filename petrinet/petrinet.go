@@ -30,6 +30,7 @@ package petrinet
 import (
   "fmt"
   "math"
+  "sort"
 )
 
 type OperationType int
@@ -41,19 +42,31 @@ const (
 
 // PetriNet struct, has an id, transitions and places
 type PetriNet struct {
- id int
+ ID int
  Context string
  transitions map[int]*Transition
  places map[int]*Place
  remoteTransitions map[int]*RemoteTransition
+ maxPriority int
 }
 
 func (pn PetriNet) String() string {
   s := ""
-  for _, _place := range pn.places{
-    s = fmt.Sprintf("%v\n%v", s, _place)
+  keys := make([]int, len(pn.places))
+  i := 0
+  for k := range pn.places {
+      keys[i] = k
+      i++
+  }
+  sort.Ints(keys)
+  for _, k := range keys {
+    s = fmt.Sprintf("%v\n%v", s, pn.places[k])
   }
   return s + "\n"
+}
+
+func (pn *PetriNet) GetPlace(id int) *Place {
+  return pn.places[id]
 }
 
 // FireTransitionByID fires a transition given its ID
@@ -88,6 +101,16 @@ func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteA
   fmt.Printf("NEW MARKS: %v\n", pn)
 }
 
+func (pn *PetriNet) GetTransitionOptionsByPriority(priority int) ([]*Transition, map[int]*RemoteTransition) {
+  priorityOptions := make([]*Transition, 0)
+  for _, transition := range pn.transitions {
+    if transition.Priority == priority && transition.canFire() {
+      priorityOptions = append(priorityOptions, transition)
+    }
+  }
+  return priorityOptions, pn.getRemoteTransitionsFromTransitions(priorityOptions)
+}
+
 // GetTransitionOptions gets all the transitions with min priority that can be
 // fired with a map from transition ID to RemoteTransition
 func (pn *PetriNet) GetTransitionOptions() ([]*Transition, map[int]*RemoteTransition) {
@@ -103,13 +126,17 @@ func (pn *PetriNet) GetTransitionOptions() ([]*Transition, map[int]*RemoteTransi
       }
     }
   }
+  return transitionOptions, pn.getRemoteTransitionsFromTransitions(transitionOptions)
+}
+
+func (pn *PetriNet) getRemoteTransitionsFromTransitions(tList []*Transition) map[int]*RemoteTransition {
   remoteTransitions := make(map[int]*RemoteTransition)
-  for _, option := range transitionOptions {
+  for _, option := range tList {
     if pn.remoteTransitions[option.ID] != nil {
       remoteTransitions[option.ID] = pn.remoteTransitions[option.ID]
     }
   }
-  return transitionOptions, remoteTransitions
+  return remoteTransitions
 }
 
 func (pn *PetriNet) AddPlace(_id, _marks int, _label string) {
@@ -117,6 +144,9 @@ func (pn *PetriNet) AddPlace(_id, _marks int, _label string) {
 }
 
 func (pn *PetriNet) AddTransition(_id, _priority int) {
+  if _priority > pn.maxPriority {
+    pn.maxPriority = _priority
+  }
   pn.transitions[_id] = &Transition {
     ID: _id,
     Priority: _priority,
@@ -179,11 +209,16 @@ func (pn *PetriNet) AddRemoteInhibitorArc(from,_transition, weight int, context 
 
 func Init(_id int, context string) *PetriNet {
   return &PetriNet{
-    id: _id,
+    ID: _id,
     places: make(map[int]*Place),
+    maxPriority: 0,
     Context: context,
     transitions: make(map[int]*Transition),
     remoteTransitions: make(map[int]*RemoteTransition)}
+}
+
+func (pn *PetriNet) GetMaxPriority() int {
+  return pn.maxPriority
 }
 
 /*

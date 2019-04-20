@@ -42,6 +42,8 @@ type petriMessage struct {
 	RemoteArcs []*petrinet.RemoteArc
 	OpType petrinet.OperationType
 	PetriContext string
+	AskedPriority int
+	imNew bool
 }
 
 func (petriMessage) Read(reader payload.Reader) (noise.Message, error) {

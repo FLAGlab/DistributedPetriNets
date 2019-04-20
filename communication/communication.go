@@ -24,15 +24,44 @@ func getRand(Range int) int {
     return r.Intn(Range)
 }
 
+type MyPeerNode struct {
+	peer *noise.Peer
+}
+
+func (cpeer MyPeerNode) SendMessage(pMsg petriMessage) error {
+	return cpeer.peer.SendMessage(pMsg)
+}
+
+type MyCommunicationNode struct {
+	node *noise.Node
+}
+
+func (cn *MyCommunicationNode) CountPeers() int {
+	return len(skademlia.Table(cn.node).GetPeers())
+}
+
+func (cn *MyCommunicationNode) Broadcast(pMsg petriMessage) []error {
+	return skademlia.Broadcast(cn.node, pMsg)
+}
+
+func (cn *MyCommunicationNode) ExternalAddress() string {
+	return cn.node.ExternalAddress()
+}
+
+func (cn *MyCommunicationNode) Dial(address string) (PeerNode, error) {
+	peer, err := cn.node.Dial(address)
+	return &MyPeerNode{peer}, err
+}
+
 /** ENTRY POINT **/
-func setup(rn *RaftNode) {
+func setup(rn *RaftNode, noiseNode *noise.Node) {
 	opcodeChat := noise.RegisterMessage(noise.NextAvailableOpcode(), (*petriMessage)(nil))
 	channelCount := 0
-	rn.pNode.node.OnPeerConnected(func(node *noise.Node, peer *noise.Peer) error {
+	noiseNode.OnPeerConnected(func(node *noise.Node, peer *noise.Peer) error {
 		fmt.Printf("PEER CONNECTED -> %v:%v\n", peer.RemoteIP(), peer.RemotePort())
 		return nil
 	})
-	rn.pNode.node.OnPeerInit(func(node *noise.Node, peer *noise.Peer) error {
+	noiseNode.OnPeerInit(func(node *noise.Node, peer *noise.Peer) error {
 		// init se llama cuando se conecta un nodo o se le hace dial
 		channelCount++
 		myChannel := channelCount
@@ -102,11 +131,11 @@ func Run() {
 		fmt.Println("CREATED PETRI NET 3")
 		pnet = petribuilder.BuildPetriNet3()
 	}
-	pnNode := InitPetriNode(node, pnet)
+	pnNode := InitPetriNode(&MyCommunicationNode{node}, pnet)
 	rn := InitRaftNode(pnNode, *leaderFlag)
 	defer rn.close()
 	go rn.Listen()
-	setup(rn)
+	setup(rn, node)
 	go node.Listen()
 
 	log.Info().Msgf("Listening for peers on port %d.", node.ExternalPort())
