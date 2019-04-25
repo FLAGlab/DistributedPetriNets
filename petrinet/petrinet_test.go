@@ -319,7 +319,7 @@ func TestAddInArcPetrinet(t *testing.T){
   if len(tr1.inArcs) != 1 {
     t.Errorf("Transition 1 should only have 1 in arc but have: %v", tr1.inArcs)
   } else {
-    p := Place{1,2,""}
+    p := Place{1,2,"",false}
     expectedArc := arc{&p, 3}
     if !reflect.DeepEqual(expectedArc, tr1.inArcs[0]) {
       t.Errorf("In arc is wrong, was %v but expected %v", tr1.inArcs[0], expectedArc)
@@ -329,9 +329,9 @@ func TestAddInArcPetrinet(t *testing.T){
   if len(tr2.inArcs) != 2 {
     t.Errorf("Transition 2 should have 2 in arc but have: %v", tr2.inArcs)
   } else {
-    p := Place{1,2,""}
+    p := Place{1,2,"",false}
     expectedArc1 := arc{&p, 3}
-    p2 := Place{2,2,""}
+    p2 := Place{2,2,"",false}
     expectedArc2 := arc{&p2, 3}
     if !((reflect.DeepEqual(expectedArc1, tr2.inArcs[0]) && reflect.DeepEqual(expectedArc2, tr2.inArcs[1])) ||
         (reflect.DeepEqual(expectedArc1, tr2.inArcs[1]) && reflect.DeepEqual(expectedArc2, tr2.inArcs[0]))) {
@@ -354,7 +354,7 @@ func TestAddOutArcPetrinet(t *testing.T) {
   if len(tr1.outArcs) != 1 {
     t.Errorf("Transition 1 should only have 1 out arcs but have: %v", tr1.outArcs)
   } else {
-    p := Place{1,2,""}
+    p := Place{1,2,"",false}
     expectedArc := arc{&p, 3}
     if !reflect.DeepEqual(expectedArc, tr1.outArcs[0]) {
       t.Errorf("Out arc is wrong, was %v but expected %v", tr1.outArcs[0], expectedArc)
@@ -364,9 +364,9 @@ func TestAddOutArcPetrinet(t *testing.T) {
   if len(tr2.outArcs) != 2 {
     t.Errorf("Transition 2 should have 2 out arcs but have: %v", tr2.outArcs)
   } else {
-    p := Place{1,2,""}
+    p := Place{1,2,"",false}
     expectedArc1 := arc{&p, 3}
-    p2 := Place{2,2,""}
+    p2 := Place{2,2,"",false}
     expectedArc2 := arc{&p2, 3}
     if !((reflect.DeepEqual(expectedArc1, tr2.outArcs[0]) && reflect.DeepEqual(expectedArc2, tr2.outArcs[1])) ||
         (reflect.DeepEqual(expectedArc1, tr2.outArcs[1]) && reflect.DeepEqual(expectedArc2, tr2.outArcs[0]))) {
@@ -389,7 +389,7 @@ func TestAddInhibitorArcPetrinet(t *testing.T) {
   if len(tr1.inhibitorArcs) != 1 {
     t.Errorf("Transition 1 should only have 1 inhib arcs but have: %v", tr1.inhibitorArcs)
   } else {
-    p := Place{1,2,""}
+    p := Place{1,2,"",false}
     expectedArc := arc{&p, 3}
     if !reflect.DeepEqual(expectedArc, tr1.inhibitorArcs[0]) {
       t.Errorf("Inhib arc is wrong, was %v but expected %v", tr1.inhibitorArcs[0], expectedArc)
@@ -399,9 +399,9 @@ func TestAddInhibitorArcPetrinet(t *testing.T) {
   if len(tr2.inhibitorArcs) != 2 {
     t.Errorf("Transition 2 should have 2 inhib arcs but have: %v", tr2.inhibitorArcs)
   } else {
-    p := Place{1,2,""}
+    p := Place{1,2,"",false}
     expectedArc1 := arc{&p, 3}
-    p2 := Place{2,2,""}
+    p2 := Place{2,2,"",false}
     expectedArc2 := arc{&p2, 3}
     if !((reflect.DeepEqual(expectedArc1, tr2.inhibitorArcs[0]) && reflect.DeepEqual(expectedArc2, tr2.inhibitorArcs[1])) ||
         (reflect.DeepEqual(expectedArc1, tr2.inhibitorArcs[1]) && reflect.DeepEqual(expectedArc2, tr2.inhibitorArcs[0]))) {
@@ -454,5 +454,113 @@ func TestAddRemoteInhibitorArc(t *testing.T) {
     t.Errorf("Wrong number of out arcs on remote transition: %v", pn.remoteTransitions[1].InhibitorArcs)
   } else if !reflect.DeepEqual(pn.remoteTransitions[1].InhibitorArcs[0], rarc) {
     t.Errorf("Wrong remote out arc, expected %v but was %v", rarc, pn.remoteTransitions[1].InhibitorArcs[0])
+  }
+}
+
+func TestGetCurrentState(t *testing.T) {
+  pn := Init(1,"ctx1")
+  pn.AddPlace(1,1,"")
+  pn.AddPlace(2,0,"")
+  pn.AddPlace(3,1,"")
+  expected := make(map[int]int)
+  expected[1]=1
+  expected[2]=0
+  expected[3]=1
+  must,result := pn.getCurrentState()
+  if !must {
+    t.Error("Wrong result there should not be a temporal place with marks")
+  }
+  if len(expected)!=len(result) {
+    t.Errorf("Expected length %v but was %v",len(expected), len(result))
+  }
+  for key, value := range expected {
+    if value != result[key] {
+      t.Errorf("Expected marks in %v to be %v but was %v",key,value,result[key])
+    } 
+  }
+}
+
+func TestGetCurrentStateFail(t *testing.T) {
+  pn := Init(1,"ctx1")
+  pn.AddPlace(1,1,"")
+  pn.AddPlace(2,0,"")
+  pn.AddPlace(3,1,"")
+  pn.SetPlaceTemporal(1)
+  must, _:= pn.getCurrentState()
+  if must {
+    t.Error("Wrong result there should exist a temporal place with marks")
+  } 
+}
+
+func TestMarksHistory(t *testing.T) {
+  pn := Init(1, "ctx1")
+  pn.AddTransition(1, 2)
+  pn.AddTransition(2, 2)
+  pn.AddPlace(1, 0, "")
+  pn.AddPlace(2, 2, "")
+  pn.AddInArc(1, 2, 1)
+  pn.AddOutArc(1, 1, 1)
+  pn.AddOutArc(2, 2, 1)
+  pn.SetPlaceTemporal(1)
+  pn.FireTransitionByID(1)
+  expected := make(map[int]int)
+  expected[1] = 0
+  expected[2] = 2
+  helper := func(expectedLen int, result []map[int]int, expectedLast map[int]int) {
+    if len(result) != expectedLen {
+    t.Errorf("Expected history to have %v item but have %v", expectedLen, result)
+    } else { 
+      if len(expected)!=len(result[expectedLen - 1]) {
+        t.Errorf("Expected length %v but was %v",len(expected), len(result[expectedLen - 1]))
+      }
+      for key, value := range expected {
+        if value != result[expectedLen - 1][key] {
+          t.Errorf("Expected marks in %v to be %v but was %v",key,value,result[expectedLen - 1][key])
+        } 
+      }
+    }  
+  }
+  helper(1, pn.marksHistory, expected)
+  
+  pn.FireTransitionByID(2)
+  helper(1, pn.marksHistory, expected)
+
+  pn.FireTransitionByID(1)
+  expected[2] = 3
+  helper(2, pn.marksHistory, expected)
+}
+
+func TestRollBack(t *testing.T) {
+  pn := Init(1, "ctx1")
+  pn.AddTransition(1, 2)
+  pn.AddTransition(2, 2)
+  pn.AddPlace(1, 0, "")
+  pn.AddPlace(2, 2, "")
+  pn.AddInArc(1, 2, 1)
+  pn.AddOutArc(1, 1, 1)
+  pn.AddOutArc(2, 2, 1)
+  pn.SetPlaceTemporal(1)
+  pn.FireTransitionByID(1)
+  pn.FireTransitionByID(2)
+  pn.FireTransitionByID(1)
+  expected := make(map[int]int)
+  expected[1] = 0
+  expected[2] = 3
+  helper := func() {
+    for id, place := range pn.places {
+      if expected[id] != place.marks {
+        t.Errorf("Error on rollback expected state %v but is %v",expected,pn.places)
+        break
+      }
+    }
+  }
+  pn.RollBack()
+  helper()
+  expected[2]=2
+  pn.RollBack()
+  helper()
+  err := pn.RollBack()
+  if err == nil {
+    t.Error("There must be an error")
   }
 }

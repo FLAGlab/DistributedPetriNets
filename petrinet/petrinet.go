@@ -28,6 +28,7 @@ eg.
 package petrinet
 
 import (
+  "errors"
   "fmt"
   "math"
   "sort"
@@ -48,6 +49,7 @@ type PetriNet struct {
  places map[int]*Place
  remoteTransitions map[int]*RemoteTransition
  maxPriority int
+ marksHistory [] map[int]int
 }
 
 func (pn PetriNet) String() string {
@@ -74,8 +76,40 @@ func (pn *PetriNet) UpdatePriority(transitionID, priority int) {
   pn.transitions[transitionID].Priority = priority
 }
 
+func (pn *PetriNet) SetPlaceTemporal(placeId int) {
+  pn.places[placeId].setTemporal(true)
+}
+
+func (pn *PetriNet) RollBack() error {
+  if len(pn.marksHistory) > 0 {
+    currState := pn.marksHistory[len(pn.marksHistory) - 1]
+    pn.marksHistory = pn.marksHistory[:len(pn.marksHistory) - 1]
+    for idPlace, mark := range currState {
+      pn.places[idPlace].marks=mark
+    }
+    return nil 
+  }
+
+  return errors.New("Invalid initial state") 
+
+}
+
+func (pn *PetriNet) getCurrentState() (bool, map[int]int) {
+  ans := make(map[int]int)
+  for id, place := range pn.places {
+    if place.temporal && place.marks > 0 {
+      return false, ans
+    }
+    ans[id] = place.marks
+  }
+  return true, ans
+}
 // FireTransitionByID fires a transition given its ID
 func (pn *PetriNet) FireTransitionByID(transitionID int) error {
+  must, state := pn.getCurrentState()
+  if must {
+    pn.marksHistory = append(pn.marksHistory, state)
+  }
   return pn.transitions[transitionID].fire()
 }
 

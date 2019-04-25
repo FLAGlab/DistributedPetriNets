@@ -11,7 +11,7 @@ func initTestTransition() *Transition {
 
 func TestAddInArc(t *testing.T) {
   tr := initTestTransition()
-  p := Place{1,1,""}
+  p := Place{1,1,"",false}
   newArc := arc{&p, 1}
   tr.addInArc(newArc)
   exists := false
@@ -25,7 +25,7 @@ func TestAddInArc(t *testing.T) {
 
 func TestAddOutArc(t *testing.T) {
   tr := initTestTransition()
-  p := Place{1,1,""}
+  p := Place{1,1,"",false}
   newArc := arc{&p, 1}
   tr.addOutArc(newArc)
   exists := false
@@ -39,7 +39,7 @@ func TestAddOutArc(t *testing.T) {
 
 func TestAddInhibArc(t *testing.T) {
   tr := initTestTransition()
-  p := Place{1,1,""}
+  p := Place{1,1,"",false}
   newArc := arc{&p, 1}
   tr.addInhibitorArc(newArc)
   exists := false
@@ -53,7 +53,7 @@ func TestAddInhibArc(t *testing.T) {
 
 func TestCanFire(t *testing.T) {
   tr := initTestTransition()
-  p := Place{1,1,""}
+  p := Place{1,1,"",false}
   newArc := arc{&p, 1}
   tr.addInArc(newArc)
   // can fire
@@ -67,7 +67,7 @@ func TestCanFire(t *testing.T) {
   }
   p.marks = 1
   //cant fire because of inhib arcs
-  p2 := Place{1,1,""}
+  p2 := Place{1,1,"",false}
   inhibArc := arc{&p2, 1}
   tr.addInhibitorArc(inhibArc)
   if tr.canFire() {
@@ -77,8 +77,8 @@ func TestCanFire(t *testing.T) {
 
 func TestFire(t *testing.T) {
   tr := initTestTransition()
-  inPlaces := []Place{{1,1,""}, {2,2,""}, {3,5,""}}
-  outPlaces := []Place{{4,0,""}, {5,1,""}, {6,0,""}}
+  inPlaces := []Place{{1,1,"",false}, {2,2,"",false}, {3,5,"",false}}
+  outPlaces := []Place{{4,0,"",false}, {5,1,"",false}, {6,0,"",false}}
   inArcs := []arc{{&inPlaces[0], 1}, {&inPlaces[1], 2}, {&inPlaces[2], 3}}
   outArcs := []arc{{&outPlaces[0], 3}, {&outPlaces[1], 2}, {&outPlaces[2], 3}}
   tr.inArcs = inArcs
