@@ -81,7 +81,7 @@ func TestAddMarksToPlaces(t *testing.T) {
     {2, "ctx1", "", 3, 0},
     {3, "ctx1", "", 2, 0}}
   expectedMarks := []int{2, 8, 4}
-  pn.AddMarksToPlaces(ADDITION, rmtArcsAdd)
+  pn.AddMarksToPlaces(ADDITION, rmtArcsAdd, false)
   for index, value := range expectedMarks {
     if pn.places[index + 1].marks != value {
       t.Errorf("Expected place %v to have %v marks", pn.places[index + 1], value)
@@ -96,7 +96,7 @@ func TestAddMarksToPlaces(t *testing.T) {
     {2, "ctx1", "", 3, 0},
     {3, "ctx1", "", 2, 0}}
   expectedMarks = []int{0, 2, 0}
-  pn.AddMarksToPlaces(SUBSTRACTION, rmtArcsAdd)
+  pn.AddMarksToPlaces(SUBSTRACTION, rmtArcsAdd, false)
   for index, value := range expectedMarks {
     if pn.places[index + 1].marks != value {
       t.Errorf("Expected place %v to have %v marks", pn.places[index + 1], value)
@@ -476,7 +476,7 @@ func TestGetCurrentState(t *testing.T) {
   for key, value := range expected {
     if value != result[key] {
       t.Errorf("Expected marks in %v to be %v but was %v",key,value,result[key])
-    } 
+    }
   }
 }
 
@@ -489,7 +489,7 @@ func TestGetCurrentStateFail(t *testing.T) {
   must, _:= pn.getCurrentState()
   if must {
     t.Error("Wrong result there should exist a temporal place with marks")
-  } 
+  }
 }
 
 func TestMarksHistory(t *testing.T) {
@@ -509,19 +509,19 @@ func TestMarksHistory(t *testing.T) {
   helper := func(expectedLen int, result []map[int]int, expectedLast map[int]int) {
     if len(result) != expectedLen {
     t.Errorf("Expected history to have %v item but have %v", expectedLen, result)
-    } else { 
+    } else {
       if len(expected)!=len(result[expectedLen - 1]) {
         t.Errorf("Expected length %v but was %v",len(expected), len(result[expectedLen - 1]))
       }
       for key, value := range expected {
         if value != result[expectedLen - 1][key] {
           t.Errorf("Expected marks in %v to be %v but was %v",key,value,result[expectedLen - 1][key])
-        } 
+        }
       }
-    }  
+    }
   }
   helper(1, pn.marksHistory, expected)
-  
+
   pn.FireTransitionByID(2)
   helper(1, pn.marksHistory, expected)
 

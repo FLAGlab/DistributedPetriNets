@@ -324,6 +324,7 @@ func (pn *petriNode) validateRemoteTransitionMarks() bool {
 func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, baseMsg petriMessage) {
 	if t != nil {
 		fmt.Println("WILL FIRE REMOTE TRANSITION METH")
+		addrDidSaveHistory := make(map[string]bool)
 		helperFunc := func(opType petrinet.OperationType, addrToArcMap map[string][]*petrinet.RemoteArc, verifiedAddrs []string) {
 			fmt.Println("RUNNING HELPER FUNC")
 			fmt.Printf("VERIFIED REMOTE ADDRS: %v\n", verifiedAddrs)
@@ -335,8 +336,12 @@ func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, baseMsg 
 				fmt.Println("WILL SEE IF IT SHOULD FIRE REMOTE")
 				if len(baseMsg2.RemoteArcs) > 0 {
 					fmt.Println("WILL FIRE REMOTE")
+					if !addrDidSaveHistory[addr] {
+						baseMsg2.SaveHistory = true
+						addrDidSaveHistory[addr] = true
+					}
 					if addr == pn.node.ExternalAddress() {
-						pn.petriNet.AddMarksToPlaces(opType, baseMsg2.RemoteArcs)
+						pn.petriNet.AddMarksToPlaces(opType, baseMsg2.RemoteArcs, baseMsg2.SaveHistory)
 						fmt.Println("REMOTE WAS LOCAL, FIRED IMMEDIATLY")
 					} else {
 						pn.SendMessageByAddress(baseMsg2, addr)
@@ -486,7 +491,7 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 	case PrintCommand:
 		pn.showPetriNetCurrentState()
 	case AddToPlacesCommand:
-		pn.petriNet.AddMarksToPlaces(pMsg.OpType, pMsg.RemoteArcs)
+		pn.petriNet.AddMarksToPlaces(pMsg.OpType, pMsg.RemoteArcs, pMsg.SaveHistory)
 	default:
 		fmt.Printf("Unknown command: %v\n", pMsg.Command)
 	}

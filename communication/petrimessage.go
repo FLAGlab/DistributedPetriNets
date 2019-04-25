@@ -45,6 +45,7 @@ type petriMessage struct {
 	PetriContext string
 	AskedPriority int
 	imNew bool
+	SaveHistory bool
 }
 
 func (p petriMessage) String() string {

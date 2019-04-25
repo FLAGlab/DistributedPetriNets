@@ -87,10 +87,10 @@ func (pn *PetriNet) RollBack() error {
     for idPlace, mark := range currState {
       pn.places[idPlace].marks=mark
     }
-    return nil 
+    return nil
   }
 
-  return errors.New("Invalid initial state") 
+  return errors.New("Invalid initial state")
 
 }
 
@@ -120,9 +120,12 @@ func (pn *PetriNet) CopyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
 }
 
 // AddMarksToPlaces adds weight (pos or neg) to specified places
-func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteArc) {
+func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteArc, saveHistory bool) {
   fmt.Println("WILL ADD MARKS TO PLACES")
   fmt.Printf("OLD MARKS: %v\n", pn)
+  if saveHistory {
+    // TODO(sosa): guardar la historia
+  }
   for _, rmtArc := range remoteArcs {
     toAdd := rmtArc.Weight
     if opType == SUBSTRACTION {
