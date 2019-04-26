@@ -118,12 +118,16 @@ func (pn *PetriNet) getCurrentState() (bool, map[int]int) {
   }
   return true, ans
 }
-// FireTransitionByID fires a transition given its ID
-func (pn *PetriNet) FireTransitionByID(transitionID int) error {
+
+func (pn *PetriNet) saveHistory() {
   must, state := pn.getCurrentState()
   if must {
     pn.marksHistory = append(pn.marksHistory, state)
   }
+}
+// FireTransitionByID fires a transition given its ID
+func (pn *PetriNet) FireTransitionByID(transitionID int) error {
+  pn.saveHistory()
   return pn.transitions[transitionID].fire()
 }
 
@@ -139,7 +143,7 @@ func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteA
   fmt.Println("WILL ADD MARKS TO PLACES")
   fmt.Printf("OLD MARKS: %v\n", pn)
   if saveHistory {
-    // TODO(sosa): guardar la historia
+    pn.saveHistory()
   }
   for _, rmtArc := range remoteArcs {
     toAdd := rmtArc.Weight
