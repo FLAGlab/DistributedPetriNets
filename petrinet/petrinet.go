@@ -80,6 +80,20 @@ func (pn *PetriNet) SetPlaceTemporal(placeId int) {
   pn.places[placeId].setTemporal(true)
 }
 
+func (pn *PetriNet) RollBackTemporal() error {
+  shouldRollBack := false
+  for _, place := range pn.places {
+    if place.temporal && place.marks > 0 {
+      shouldRollBack = true
+      break
+    }
+  }
+  if shouldRollBack {
+    return pn.RollBack()
+  }
+  return nil
+}
+
 func (pn *PetriNet) RollBack() error {
   if len(pn.marksHistory) > 0 {
     currState := pn.marksHistory[len(pn.marksHistory) - 1]
@@ -115,6 +129,7 @@ func (pn *PetriNet) FireTransitionByID(transitionID int) error {
 
 func (pn *PetriNet) CopyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
   for i, rmtArc := range remoteArcs {
+    fmt.Printf("PetrinetID: %v My places: %v\n", pn.ID, pn.places)
     remoteArcs[i].Marks = pn.places[rmtArc.PlaceID].marks
   }
 }

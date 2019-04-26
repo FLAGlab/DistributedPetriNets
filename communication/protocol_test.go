@@ -553,7 +553,6 @@ func TestPriorityChangeBecauseOfInArcs(t *testing.T) {
   }
 }
 
-// TODO: tests for priority, test for experiment which is not working correctly
 func TestPriorityChangeBecauseOfInhibitorArcs(t *testing.T) {
   // remote arcs in leader and other
   pn := experiment1TestPetriNet(1, "ctx1")
@@ -636,6 +635,224 @@ func TestPriorityChangeBecauseOfInhibitorArcs(t *testing.T) {
     otherPn := cm.nodes[addr].rftNode.pNode.petriNet
     if otherPn.GetPlace(3).GetMarks() != marks[0] {
       t.Errorf(placeErrMsg, 1, addr, marks[0], otherPn.GetPlace(1).GetMarks())
+    }
+  }
+}
+
+func TestRemoteTransitionSavesHistory(t *testing.T) {
+  // remote arcs in leader and other
+  pn := petrinet.Init(1, "ctx1")
+  pn2 := petrinet.Init(2, "ctx1")
+  pn3 := petrinet.Init(3, "ctx1")
+  pn.AddPlace(1, 1, "")
+  pn2.AddPlace(1, 1, "")
+  pn2.AddPlace(2, 0, "")
+  pn3.AddPlace(1, 1, "")
+  pn3.AddPlace(2, 0, "")
+  pn.AddRemoteTransition(1)
+  // TODO: Terminar este test
+}
+
+func TestRollBackTemporalPlacesOnLeader(t *testing.T) {
+  pn := petrinet.Init(1, "ctx1")
+  pn.AddPlace(1, 0, "")
+  pn.SetPlaceTemporal(1)
+  pn.AddPlace(2, 0, "")
+  pn.AddTransition(1, 1)
+  pn.AddTransition(2, 0)
+  pn.AddInArc(1, 2, 1)
+  pn.AddOutArc(1, 1, 1)
+  pn.AddOutArc(2, 2, 1)
+  pn.AddRemoteTransition(2)
+  pn.AddRemoteInhibitorArc(1, 2, 1, "inhib")
+  pn2 := petrinet.Init(2, "ctx1")
+  pn2.AddPlace(1, 0, "")
+  pn2.SetPlaceTemporal(1)
+  pn2.AddPlace(2, 0, "")
+  pn2.AddTransition(1, 1)
+  pn2.AddTransition(2, 0)
+  pn2.AddInArc(1, 2, 1)
+  pn2.AddOutArc(1, 1, 1)
+  pn2.AddOutArc(2, 2, 1)
+  pn2.AddRemoteTransition(2)
+  pn2.AddRemoteInhibitorArc(1, 2, 1, "inhib")
+  // t1 -> p1(t) -> t2(inhib blocks this) -> p2
+  pn3 := petrinet.Init(3, "inhib")
+  pn3.AddPlace(1, 1, "")
+  pList := []*petrinet.PetriNet{pn, pn2, pn3}
+  cm, leader := setUpTestPetriNodes(pList, pn.ID)
+  deferFunc := initListen(cm, leader)
+  defer deferFunc()
+  picker := pnTransitionPicker{1, "addr_1"}
+  leader.rftNode.pNode.transitionPicker = func(options map[string][]*petrinet.Transition) (*petrinet.Transition, string) {
+    pickedT, addr := picker.pick(options)
+    fmt.Printf("Chosen transition: %v\nChosen addr: %v\n", pickedT, addr)
+    fmt.Printf("Fire options: %v\n", options)
+    return pickedT, addr
+  }
+  leader.rftNode.ask()
+  // should receive transitions from nodes 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.prepareFire()
+  // should realice transitions of priority 0 cant fire, so it should try with priority 1
+  fmt.Println("_HERE_: will try priority 1")
+  leader.rftNode.ask()
+  fmt.Println("_HERE_: asked")
+  // should receive transitions from nodes 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  fmt.Println("_HERE_: received msg")
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  fmt.Println("_HERE_: received other msg")
+  leader.rftNode.prepareFire()
+  fmt.Println("_HERE_: done preparing fire")
+  leader.rftNode.fire()
+  fmt.Println("_HERE_: done fire")
+  leader.rftNode.print()
+  fmt.Println("_HERE_: Fired transition 1, done")
+  expectedMarks := make(map[string][]int)
+  expectedMarks["addr_1"] = []int{1, 0} //from, to
+  expectedMarks["addr_2"] = []int{0, 0}
+  for addr, marks := range expectedMarks {
+    otherPn := cm.nodes[addr].rftNode.pNode.petriNet
+    if otherPn.GetPlace(1).GetMarks() != marks[0] {
+      t.Errorf(placeErrMsg, 1, addr, marks[0], otherPn.GetPlace(1).GetMarks())
+    }
+    if otherPn.GetPlace(2).GetMarks() != marks[1] {
+      t.Errorf(placeErrMsg, 2, addr, marks[1], otherPn.GetPlace(2).GetMarks())
+    }
+  }
+
+  picker.transitionIDToFire = 2
+  // currently place1 from pn should have 1, so it would propose t2 to fire
+  fmt.Println("_HERE_: will try transition 2")
+  leader.rftNode.ask()
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.prepareFire()
+  fmt.Println("_HERE_: will receive marks from 3")
+  // should receive marks from 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  // should realice that it must not fire, so should go to PREPARE_FIRE_STEP
+  fmt.Println("_HERE_: will prepare fire")
+  leader.rftNode.prepareFire()
+  fmt.Println("_HERE_: Done preparing fire, should have tried to roll back")
+  // should realice no transitions of priority 0 can fire, so it should roll RollBack
+  // all temporal places
+  expectedMarks["addr_1"] = []int{0, 0} //from, to
+  expectedMarks["addr_2"] = []int{0, 0}
+  for addr, marks := range expectedMarks {
+    otherPn := cm.nodes[addr].rftNode.pNode.petriNet
+    if otherPn.GetPlace(1).GetMarks() != marks[0] {
+      t.Errorf(placeErrMsg, 1, addr, marks[0], otherPn.GetPlace(1).GetMarks())
+    }
+    if otherPn.GetPlace(2).GetMarks() != marks[1] {
+      t.Errorf(placeErrMsg, 2, addr, marks[1], otherPn.GetPlace(2).GetMarks())
+    }
+  }
+  fmt.Println("_HERE_: will print")
+  leader.rftNode.print()
+  fmt.Println("_HERE_: Done print")
+}
+
+func TestRollBackTemporalPlacesOnOther(t *testing.T) {
+  pn := petrinet.Init(1, "ctx1")
+  pn.AddPlace(1, 0, "")
+  pn.SetPlaceTemporal(1)
+  pn.AddPlace(2, 0, "")
+  pn.AddTransition(1, 1)
+  pn.AddTransition(2, 0)
+  pn.AddInArc(1, 2, 1)
+  pn.AddOutArc(1, 1, 1)
+  pn.AddOutArc(2, 2, 1)
+  pn.AddRemoteTransition(2)
+  pn.AddRemoteInhibitorArc(1, 2, 1, "inhib")
+  pn2 := petrinet.Init(2, "ctx1")
+  pn2.AddPlace(1, 0, "")
+  pn2.SetPlaceTemporal(1)
+  pn2.AddPlace(2, 0, "")
+  pn2.AddTransition(1, 1)
+  pn2.AddTransition(2, 0)
+  pn2.AddInArc(1, 2, 1)
+  pn2.AddOutArc(1, 1, 1)
+  pn2.AddOutArc(2, 2, 1)
+  pn2.AddRemoteTransition(2)
+  pn2.AddRemoteInhibitorArc(1, 2, 1, "inhib")
+  // t1 -> p1(t) -> t2(inhib blocks this) -> p2
+  pn3 := petrinet.Init(3, "inhib")
+  pn3.AddPlace(1, 1, "")
+  pList := []*petrinet.PetriNet{pn, pn2, pn3}
+  cm, leader := setUpTestPetriNodes(pList, pn.ID)
+  deferFunc := initListen(cm, leader)
+  defer deferFunc()
+  picker := pnTransitionPicker{1, "addr_2"}
+  leader.rftNode.pNode.transitionPicker = func(options map[string][]*petrinet.Transition) (*petrinet.Transition, string) {
+    pickedT, addr := picker.pick(options)
+    fmt.Printf("Chosen transition: %v\nChosen addr: %v\n", pickedT, addr)
+    fmt.Printf("Fire options: %v\n", options)
+    return pickedT, addr
+  }
+  leader.rftNode.ask()
+  // should receive transitions from nodes 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.prepareFire()
+  // should realice transitions of priority 0 cant fire, so it should try with priority 1
+  fmt.Println("_HERE_: will try priority 1")
+  leader.rftNode.ask()
+  fmt.Println("_HERE_: asked")
+  // should receive transitions from nodes 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  fmt.Println("_HERE_: received msg")
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  fmt.Println("_HERE_: received other msg")
+  leader.rftNode.prepareFire()
+  fmt.Println("_HERE_: done preparing fire")
+  leader.rftNode.fire()
+  fmt.Println("_HERE_: done fire")
+  leader.rftNode.print()
+  fmt.Println("_HERE_: Fired transition 1, done")
+  expectedMarks := make(map[string][]int)
+  expectedMarks["addr_1"] = []int{0, 0} //from, to
+  expectedMarks["addr_2"] = []int{1, 0}
+  for addr, marks := range expectedMarks {
+    otherPn := cm.nodes[addr].rftNode.pNode.petriNet
+    if otherPn.GetPlace(1).GetMarks() != marks[0] {
+      t.Errorf(placeErrMsg, 1, addr, marks[0], otherPn.GetPlace(1).GetMarks())
+    }
+    if otherPn.GetPlace(2).GetMarks() != marks[1] {
+      t.Errorf(placeErrMsg, 2, addr, marks[1], otherPn.GetPlace(2).GetMarks())
+    }
+  }
+
+  picker.transitionIDToFire = 2
+  // currently place1 from pn should have 1, so it would propose t2 to fire
+  fmt.Println("_HERE_: will try transition 2")
+  leader.rftNode.ask()
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.prepareFire()
+  fmt.Println("_HERE_: will receive marks from 3")
+  // should receive marks from 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  // should realice that it must not fire, so should go to PREPARE_FIRE_STEP
+  fmt.Println("_HERE_: will prepare fire")
+  leader.rftNode.prepareFire()
+  fmt.Println("_HERE_: Done preparing fire, should have tried to roll back")
+  // should realice no transitions of priority 0 can fire, so it should roll RollBack
+  // all temporal places
+  fmt.Println("_HERE_: will print")
+  leader.rftNode.print()
+  fmt.Println("_HERE_: Done print")
+  expectedMarks["addr_1"] = []int{0, 0} //from, to
+  expectedMarks["addr_2"] = []int{0, 0}
+  for addr, marks := range expectedMarks {
+    otherPn := cm.nodes[addr].rftNode.pNode.petriNet
+    if otherPn.GetPlace(1).GetMarks() != marks[0] {
+      t.Errorf(placeErrMsg, 1, addr, marks[0], otherPn.GetPlace(1).GetMarks())
+    }
+    if otherPn.GetPlace(2).GetMarks() != marks[1] {
+      t.Errorf(placeErrMsg, 2, addr, marks[1], otherPn.GetPlace(2).GetMarks())
     }
   }
 }

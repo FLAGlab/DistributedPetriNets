@@ -564,3 +564,33 @@ func TestRollBack(t *testing.T) {
     t.Error("There must be an error")
   }
 }
+
+func TestRollBackTemporal(t *testing.T) {
+  pn := Init(1, "ctx1")
+  pn.AddTransition(1, 2)
+  pn.AddTransition(2, 2)
+  pn.AddPlace(1, 0, "")
+  pn.AddPlace(2, 2, "")
+  pn.AddInArc(1, 2, 1)
+  pn.AddOutArc(1, 1, 1)
+  pn.AddOutArc(2, 2, 1)
+  pn.SetPlaceTemporal(1)
+  pn.FireTransitionByID(1)
+  pn.FireTransitionByID(2)
+  pn.FireTransitionByID(1)
+  expected := make(map[int]int)
+  expected[1] = 0
+  expected[2] = 3
+  helper := func() {
+    for id, place := range pn.places {
+      if expected[id] != place.marks {
+        t.Errorf("Error on rollback expected state %v but is %v",expected,pn.places)
+        break
+      }
+    }
+  }
+  pn.RollBackTemporal()
+  helper() // should rollback to expected
+  pn.RollBackTemporal()
+  helper() // shouldn't rollback because there is no mark on temporal
+}

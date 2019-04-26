@@ -245,6 +245,18 @@ func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 	}
 }
 
+func (pn *petriNode) requestTemporalPlacesRollback(baseMsg petriMessage) {
+	pn.petriNet.RollBackTemporal()
+	baseMsg.Command = RollBackTemporalPlacesCommand
+	success := func () {
+		fmt.Println("Requested roll back of temporal places")
+	}
+	timeoutCallback := func() {
+		fmt.Println("ERROR: on roll back temporal of all")
+	}
+	pn.broadcastWithTimeout(baseMsg, success, timeoutCallback)
+}
+
 // after receiving all valid transitions, do this first and wait for askedAddrs to respond
 func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 	fmt.Println("PRERAREFIRE METH CALLED")
@@ -253,14 +265,14 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		fmt.Println("_NO TRANSITION TO SELECT")
 		pn.resetStep()
 		// will retry with next priority
-		fmt.Printf("MAX PRIORITY: %v\n", pn.maxPriority)
-		fmt.Printf("PRIORITY TO ASK B4: %v\n", pn.priorityToAsk)
 		if pn.priorityToAsk < pn.maxPriority {
+			if pn.priorityToAsk == 0 {
+				pn.requestTemporalPlacesRollback(baseMsg)
+			}
 			pn.priorityToAsk++
 		} else {
 			pn.priorityToAsk = 0
 		}
-		fmt.Printf("PRIORITY TO ASK AFTER: %v\n", pn.priorityToAsk)
 	} else {
 		pn.chosenTransition = transition
 		pn.chosenTransitionAddress = peerAddr
@@ -492,6 +504,11 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 		pn.showPetriNetCurrentState()
 	case AddToPlacesCommand:
 		pn.petriNet.AddMarksToPlaces(pMsg.OpType, pMsg.RemoteArcs, pMsg.SaveHistory)
+	case RollBackTemporalPlacesCommand:
+		err := pn.petriNet.RollBackTemporal()
+		if err != nil {
+			fmt.Printf("Tried to roll back more, got: %v\n", err)
+		}
 	default:
 		fmt.Printf("Unknown command: %v\n", pMsg.Command)
 	}
