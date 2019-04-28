@@ -856,3 +856,15 @@ func TestRollBackTemporalPlacesOnOther(t *testing.T) {
     }
   }
 }
+
+func TestRollBackByAddress(t *testing.T) {
+  // TODO: add tests
+}
+
+func TestUniversalRemoteTransitionCanFire(t *testing.T) {
+  // TODO: add test
+}
+
+func TestUniversalRemoteTransitionCantFire(t *testing.T) {
+  // TODO: add test
+}

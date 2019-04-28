@@ -594,3 +594,118 @@ func TestRollBackTemporal(t *testing.T) {
   pn.RollBackTemporal()
   helper() // shouldn't rollback because there is no mark on temporal
 }
+
+func TestGenerateUniversalTransitions(t *testing.T) {
+    pn := Init(1, "universalCtx")
+    pn.AddTransition(1, 0)
+    pn.AddTransition(2, 0)
+    pn.AddTransition(3, 1)
+    pn.AddRemoteTransition(1)
+    pn.AddRemoteTransition(2)
+    pn.AddRemoteTransition(3)
+    pn.AddRemoteInArc(1, 1, 3, "ctx1")
+    pn.AddRemoteInArc(2, 1, 3, "ctx1")
+    pn.AddRemoteOutArc(1, 1, 3, "ctx4")
+    pn.AddRemoteOutArc(1, 1, 3, "ctx3")
+    pn.AddRemoteInhibitorArc(3, 1, 3, "ctx1")
+
+    pn.AddRemoteInhibitorArc(3, 3, 3, "ctx1") // priority 1
+
+    pn.AddRemoteOutArc(2, 2, 3, "ctx3")
+    pn.AddRemoteOutArc(2, 2, 3, "ctx5") // doesnt exist, should add no remote transitions of 2
+    ctxToAddrs := make(map[string][]string)
+    ctxToAddrs["ctx1"] = []string{"addr1", "addr2"}
+    ctxToAddrs["ctx2"] = []string{"addr3", "addr4", "addr5"}
+    ctxToAddrs["ctx3"] = []string{"addr6"}
+    ctxToAddrs["ctx4"] = []string{"addr7", "addr8"}
+
+    transitions, rmtTransitions := pn.GenerateUniversalTransitionsByPriority(ctxToAddrs, 1)
+    t.Logf("Transitions: %v, Remote transitions: %v", transitions, rmtTransitions)
+    t.Logf("Rmt1: %v, Rmt2: %v", rmtTransitions[0], rmtTransitions[1])
+    if len(transitions) != 2 {
+      t.Errorf("Expected to generate 2 transitions but did %v", len(transitions))
+    }
+    expected1 := RemoteTransition{0,
+      []RemoteArc{},
+      []RemoteArc{},
+      []RemoteArc{{3, "ctx1", "addr1", 3, 0}}}
+    expected2 := RemoteTransition{0,
+      []RemoteArc{},
+      []RemoteArc{},
+      []RemoteArc{{3, "ctx1", "addr2", 3, 0}}}
+    found1 := false
+    found2 := false
+    for ind, tr := range transitions {
+      foundOne := false
+      if !found1 && len(rmtTransitions[tr.ID].InhibitorArcs) == 1 && rmtTransitions[tr.ID].InhibitorArcs[0] == expected1.InhibitorArcs[0] {
+        foundOne = true
+        found1 = true
+      } else if !found2 && len(rmtTransitions[tr.ID].InhibitorArcs) == 1 && rmtTransitions[tr.ID].InhibitorArcs[0] == expected2.InhibitorArcs[0] {
+        foundOne = true
+        found2 = true
+      }
+      if !foundOne {
+        t.Errorf("Wrong remote transition %v found at %v, expected it to be %v or %v", rmtTransitions[tr.ID], ind, expected1, expected2)
+      }
+    }
+
+    transitions, rmtTransitions = pn.GenerateUniversalTransitionsByPriority(ctxToAddrs, 0)
+    t.Logf("Transitions: %v, Remote transitions: %v", transitions, rmtTransitions)
+    for ind, rmtT := range rmtTransitions {
+      t.Logf("Rmt Transition %v: %v", ind, rmtT)
+    }
+    if len(transitions) != 4 {
+      t.Errorf("Expected to generate 4 transitions but did %v", len(transitions))
+    }
+    expectedTr1 := RemoteTransition{1,
+      []RemoteArc{{1, "ctx1", "addr1", 3, 0}, {2, "ctx1", "addr1", 3, 0}},
+      []RemoteArc{{1, "ctx4", "addr7", 3, 0}, {1, "ctx3", "addr6", 3, 0}},
+      []RemoteArc{{3, "ctx1", "addr1", 3, 0}}}
+    expectedTr2 := RemoteTransition{1,
+      []RemoteArc{{1, "ctx1", "addr1", 3, 0}, {2, "ctx1", "addr1", 3, 0}},
+      []RemoteArc{{1, "ctx4", "addr8", 3, 0}, {1, "ctx3", "addr6", 3, 0}},
+      []RemoteArc{{3, "ctx1", "addr1", 3, 0}}}
+    expectedTr3 := RemoteTransition{1,
+      []RemoteArc{{1, "ctx1", "addr2", 3, 0}, {2, "ctx1", "addr2", 3, 0}},
+      []RemoteArc{{1, "ctx4", "addr7", 3, 0}, {1, "ctx3", "addr6", 3, 0}},
+      []RemoteArc{{3, "ctx1", "addr2", 3, 0}}}
+    expectedTr4 := RemoteTransition{1,
+      []RemoteArc{{1, "ctx1", "addr2", 3, 0}, {2, "ctx1", "addr2", 3, 0}},
+      []RemoteArc{{1, "ctx4", "addr8", 3, 0}, {1, "ctx3", "addr6", 3, 0}},
+      []RemoteArc{{3, "ctx1", "addr2", 3, 0}}}
+    found1 = false
+    found2 = false
+    found3 := false
+    found4 := false
+    for ind, tr := range transitions {
+      foundOne := false
+      if !found1 && sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InhibitorArcs, expectedTr1.InhibitorArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InArcs, expectedTr1.InArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].OutArcs, expectedTr1.OutArcs) {
+        t.Log("Found expected tr1")
+        foundOne = true
+        found1 = true
+      } else if !found2 && sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InhibitorArcs, expectedTr2.InhibitorArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InArcs, expectedTr2.InArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].OutArcs, expectedTr2.OutArcs) {
+        t.Log("Found expected tr2")
+        foundOne = true
+        found2 = true
+      } else if !found3 && sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InhibitorArcs, expectedTr3.InhibitorArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InArcs, expectedTr3.InArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].OutArcs, expectedTr3.OutArcs) {
+        t.Log("Found expected tr3")
+        foundOne = true
+        found3 = true
+      } else if !found4 && sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InhibitorArcs, expectedTr4.InhibitorArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].InArcs, expectedTr4.InArcs) &&
+      sliceContainsAllRemoteArcs(rmtTransitions[tr.ID].OutArcs, expectedTr4.OutArcs) {
+        t.Log("Found expected tr4")
+        foundOne = true
+        found4 = true
+      }
+      if !foundOne {
+        t.Errorf("Wrong remote transition %v found at %v, expected it to be %v, %v, %v or %v", rmtTransitions[tr.ID], ind, expectedTr1, expectedTr2, expectedTr3, expectedTr4)
+      }
+    }
+}

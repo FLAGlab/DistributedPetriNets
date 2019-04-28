@@ -18,6 +18,8 @@ const (
 	RECEIVING_MARKS_STEP LeaderStep = 3
 	FIRE_STEP LeaderStep = 4
 	PRINT_STEP LeaderStep = 5
+
+	UNIVERSAL_PN string = "universal"
 )
 
 type PeerNode interface {
@@ -34,6 +36,7 @@ type CommunicationNode interface {
 type petriNode struct {
 	node CommunicationNode //*noise.Node
 	petriNet *petrinet.PetriNet
+	universalPetriNet *petrinet.PetriNet
 	step LeaderStep
 	timeoutCount int
 	transitionOptions map[string][]*petrinet.Transition
@@ -75,6 +78,14 @@ func InitPetriNode(node CommunicationNode, petriNet *petrinet.PetriNet) *petriNo
 		}}
 }
 
+// SetUniversalPetriNet adds a petri net whose purpose is to keep remote Transitions
+// that require connection with all the contexts needed
+func (pn *petriNode) SetUniversalPetriNet(upn *petrinet.PetriNet) {
+	// transition goes from ctx1 to ctx2 1 on 1, if we have 2 ctx2 and 1 ctx1
+	// it should be ctx1 -> t ->ctx2(1) and ctx1 -> t -> ctx2(2)
+	pn.universalPetriNet = upn
+}
+
 func (pn *petriNode) incStep() {
 	pn.step = (pn.step + 1) % (PRINT_STEP + 1)
 }
@@ -91,6 +102,10 @@ func (pn *petriNode) initTransitionOptions() {
 	pn.transitionOptions = make(map[string][]*petrinet.Transition)
 	pn.remoteTransitionOptions = make(map[string]map[int]*petrinet.RemoteTransition)
 	pn.transitionOptions[pn.node.ExternalAddress()], pn.remoteTransitionOptions[pn.node.ExternalAddress()] = pn.petriNet.GetTransitionOptionsByPriority(pn.priorityToAsk)
+
+	if pn.universalPetriNet != nil {
+		pn.transitionOptions[UNIVERSAL_PN], pn.remoteTransitionOptions[UNIVERSAL_PN] = pn.universalPetriNet.GenerateUniversalTransitionsByPriority(pn.contextToAddrs, pn.priorityToAsk)
+	}
 }
 
 func (pn *petriNode) addTransitionOption(key string, options []*petrinet.Transition, remote map[int]*petrinet.RemoteTransition) int {
@@ -143,13 +158,19 @@ func (pn *petriNode) selectTransition() (*petrinet.Transition, string) {
 	return pn.transitionPicker(pn.transitionOptions)
 }
 
-func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, baseMsg petriMessage) map[string]bool {
+func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, isUniversalPN bool, baseMsg petriMessage) (map[string]bool, error) {
 	connectedAddrs := make(map[string]bool)
 	if remoteTransition == nil {
-		return connectedAddrs
+		return connectedAddrs, nil
 	}
 	baseMsg.Command = MarksCommand
-	for rmtAddr, places := range remoteTransition.GetPlaceIDsByAddrs() {
+	var rmtPlaceIDsByAddrs map[string][]int
+	if isUniversalPN {
+		rmtPlaceIDsByAddrs = remoteTransition.GetAllPlaceIDsByAddrs()
+	} else {
+		rmtPlaceIDsByAddrs = remoteTransition.GetPlaceIDsByAddrs() // excludes out arcs
+	}
+	for rmtAddr, places := range rmtPlaceIDsByAddrs {
 		// places is []int
 		baseMsg2 := baseMsg
 		baseMsg2.RemoteArcs = make([]*petrinet.RemoteArc, len(places))
@@ -167,10 +188,13 @@ func (pn *petriNode) askForMarks(remoteTransition *petrinet.RemoteTransition, ba
 			err = pn.SendMessageByAddress(baseMsg2, rmtAddr)
 			if err == nil {
 				connectedAddrs[rmtAddr] = true
+			} else if isUniversalPN {
+				// on universal pn case, ALL addresses should be available
+				return connectedAddrs, fmt.Errorf("Address %v is unreachable but needed for universal remote transition %v", rmtAddr, remoteTransition)
 			}
 		}
 	}
-	return connectedAddrs
+	return connectedAddrs, nil
 }
 
 // if transition option is not valid, remove it
@@ -285,17 +309,24 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 			copy := *rmtTransitionOption // get a copy
 			remoteTransition := &copy // pointer to the copy
 			fmt.Printf("REMOTE TRANSITION TO FIRE B4 UPDATE BY CTX: %v\n", remoteTransition)
-			remoteTransition.UpdateAddressByContext(pn.contextToAddrs, peerAddr)
+			pn.chosenRemoteTransition = remoteTransition
+			if peerAddr != UNIVERSAL_PN {
+				remoteTransition.UpdateAddressByContext(pn.contextToAddrs, peerAddr)
+			}
 			fmt.Printf("CTX TO ADDRS: %v\n", pn.contextToAddrs)
 			fmt.Printf("REMOTE TRANSITION TO FIRE AFTER UPDATE BY CTX: %v\n", remoteTransition)
-			pn.chosenRemoteTransition = remoteTransition
-			askedAddrs := pn.askForMarks(remoteTransition, baseMsg)
+			askedAddrs, err := pn.askForMarks(remoteTransition, peerAddr == UNIVERSAL_PN, baseMsg)
 			fmt.Println(askedAddrs)
-			pn.addressMissing = askedAddrs
-			pn.incStep() // RECEIVING_MARKS_STEP
-			if len(pn.addressMissing) == 0 {
-				// skip RECEIVING_MARKS_STEP
-				pn.incStep() // FIRE_STEP
+			if err != nil {
+				pn.removeTransitionOption(pn.chosenTransitionAddress, pn.chosenTransition)
+				pn.step = PREPARE_FIRE_STEP
+			} else {
+				pn.addressMissing = askedAddrs
+				pn.incStep() // RECEIVING_MARKS_STEP
+				if len(pn.addressMissing) == 0 {
+					// skip RECEIVING_MARKS_STEP
+					pn.incStep() // FIRE_STEP
+				}
 			}
 		} else {
 			fmt.Println("THERE IS NO REMOTE TRANSITION TO FIRE")
@@ -332,12 +363,11 @@ func (pn *petriNode) validateRemoteTransitionMarks() bool {
 	return ans
 }
 
-
-func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, baseMsg petriMessage) {
+func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, isUniversalPN bool, baseMsg petriMessage) error {
 	if t != nil {
 		fmt.Println("WILL FIRE REMOTE TRANSITION METH")
 		addrDidSaveHistory := make(map[string]bool)
-		helperFunc := func(opType petrinet.OperationType, addrToArcMap map[string][]*petrinet.RemoteArc, verifiedAddrs []string) {
+		helperFunc := func(opType petrinet.OperationType, addrToArcMap map[string][]*petrinet.RemoteArc, verifiedAddrs []string) error {
 			fmt.Println("RUNNING HELPER FUNC")
 			fmt.Printf("VERIFIED REMOTE ADDRS: %v\n", verifiedAddrs)
 			for _, addr := range verifiedAddrs {
@@ -356,22 +386,45 @@ func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, baseMsg 
 						pn.petriNet.AddMarksToPlaces(opType, baseMsg2.RemoteArcs, baseMsg2.SaveHistory)
 						fmt.Println("REMOTE WAS LOCAL, FIRED IMMEDIATLY")
 					} else {
-						pn.SendMessageByAddress(baseMsg2, addr)
-						fmt.Printf("SENT MSG TO ADDRES %v\n", addr)
+						err := pn.SendMessageByAddress(baseMsg2, addr)
+						fmt.Printf("SENT MSG TO ADDRES %v, Err: %v\n", addr, err)
+						if isUniversalPN && err != nil {
+								// For universal pn remote transitions ALL addresses should be connected, else
+								// it should roll back
+								fmt.Printf("ERROR MSG TO ADDRES %v: %v\n", addr, err)
+								return err
+						}
 					}
 				}
 		  }
+			return nil
 		}
 		placesToFire := t.GetInArcsByAddrs()
 		placesToReceive := t.GetOutArcsByAddrs()
 		fmt.Printf("REMOTE IN ARCS TO FIRE: %v\n", placesToFire)
 		fmt.Printf("REMOTE OUT ARCS TO FIRE: %v\n", placesToReceive)
-		helperFunc(petrinet.SUBSTRACTION, placesToFire, pn.verifiedRemoteAddrs)
-		var verifiedOut []string
-		for key := range placesToReceive {
-			verifiedOut = append(verifiedOut, key) // for out I dont care if its verified, do all
+		err := helperFunc(petrinet.SUBSTRACTION, placesToFire, pn.verifiedRemoteAddrs)
+		if err == nil {
+			var verifiedOut []string
+			for key := range placesToReceive {
+				verifiedOut = append(verifiedOut, key) // for out I dont care if its verified, do all
+			}
+			err = helperFunc(petrinet.ADDITION, placesToReceive, verifiedOut)
 		}
-		helperFunc(petrinet.ADDITION, placesToReceive, verifiedOut)
+		if err != nil {
+			// there was at least one address that was unreachable.
+			// should roll back all the ones that did update
+			pn.rollBackByAddress(addrDidSaveHistory, baseMsg)
+			return fmt.Errorf("Not all adresses were connected for universal petri net, did roll back. %v", err)
+		}
+	}
+	return nil
+}
+
+func (pn *petriNode) rollBackByAddress(addrMap map[string]bool, baseMsg petriMessage) {
+	baseMsg.Command = RollBackCommand
+	for peerAddr := range addrMap {
+		pn.SendMessageByAddress(baseMsg, peerAddr)
 	}
 }
 
@@ -396,8 +449,8 @@ func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
 		fmt.Printf("_WILL FIRE TRANSITION %v\n", transition.ID)
 		pn.petriNet.FireTransitionByID(transition.ID)
 		err = nil
-	} else {
-		// Transition is remote
+	} else if peerAddr != UNIVERSAL_PN {
+		// Transition is from other peer
 		fmt.Println("WILL SEND MSG TO FIRE TRANSITION")
 		err = pn.SendMessageByAddress(baseMsg, peerAddr)
 		fmt.Println("DONE  SENDING MSG TO FIRE TRANSITION")
@@ -405,9 +458,15 @@ func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
 	if err == nil {
 		// Transition fired with no problem
 		fmt.Println("NO ERROR, WILL FIRE REMOTE TRANSITION")
-		pn.fireRemoteTransition(remoteTransition, baseMsg) // Fire remote transition
-		pn.incStep()
-		pn.priorityToAsk = 0 // reset for next iteration
+		err = pn.fireRemoteTransition(remoteTransition, peerAddr == UNIVERSAL_PN, baseMsg) // Fire remote transition
+		fmt.Println(err)
+		if err != nil {
+			pn.removeTransitionOption(pn.chosenTransitionAddress, pn.chosenTransition)
+			pn.step = PREPARE_FIRE_STEP
+		} else {
+			pn.incStep()
+			pn.priorityToAsk = 0 // reset for next iteration
+		}
 	} else {
 		pn.resetStep()
 	}
@@ -506,6 +565,11 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 		pn.petriNet.AddMarksToPlaces(pMsg.OpType, pMsg.RemoteArcs, pMsg.SaveHistory)
 	case RollBackTemporalPlacesCommand:
 		err := pn.petriNet.RollBackTemporal()
+		if err != nil {
+			fmt.Printf("Tried to roll back more, got: %v\n", err)
+		}
+	case RollBackCommand:
+		err := pn.petriNet.RollBack()
 		if err != nil {
 			fmt.Printf("Tried to roll back more, got: %v\n", err)
 		}

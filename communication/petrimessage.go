@@ -31,7 +31,9 @@ const (
 	// AddToPlacesCommand to request mark addition (pos or neg) to a place
 	AddToPlacesCommand CommandType = "addtoplaces"
 	// RollBackTemporalPlacesCommand to request roll back of all temporal places
-	RollBackTemporalPlacesCommand CommandType = "rollback"
+	RollBackTemporalPlacesCommand CommandType = "rollbacktemporal"
+	// RollBackCommand to request roll back
+	RollBackCommand CommandType = "rollback"
 )
 
 type petriMessage struct {

@@ -283,6 +283,24 @@ func (pn *PetriNet) GetMaxPriority() int {
   return pn.maxPriority
 }
 
+func (pn *PetriNet) GenerateUniversalTransitionsByPriority(ctxtMap map[string][]string, askedPriority int) ([]*Transition, map[int]*RemoteTransition) {
+  var rmtTransitions []RemoteTransition
+  for _, rmtTransition := range pn.remoteTransitions {
+    if pn.transitions[rmtTransition.ID].Priority == askedPriority {
+      rmtTransitions = append(rmtTransitions, rmtTransition.generateTransitionsByContext(ctxtMap)...)
+    }
+  }
+  transitions := make([]*Transition, len(rmtTransitions))
+  idToRmtTransition := make(map[int]*RemoteTransition)
+  for index, rmtTransition := range rmtTransitions {
+    transitions[index] = &Transition{index, askedPriority, nil, nil, nil}
+    copy := rmtTransition
+    copy.ID = index
+    idToRmtTransition[index] = &copy
+  }
+  return transitions, idToRmtTransition
+}
+
 /*
 Hacer ejercicio de mutual exclution distribuido
 que pasa si se conecta en medio de elegir y fire
