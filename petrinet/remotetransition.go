@@ -40,12 +40,12 @@ func convertToAddressArcsMap(raList []RemoteArc) map[string][]*RemoteArc {
 func createArcsWithAddress(arcList []RemoteArc, contextToAddrs map[string][]string, myAddr string) []RemoteArc {
 	var newArcs []RemoteArc
 	for _, item := range arcList {
-		copy := item
-		addrs := contextToAddrs[copy.Context]
+		cpy := item
+		addrs := contextToAddrs[cpy.Context]
 		for _, addr := range addrs {
 			if myAddr != addr { // avoid connecting with self
-				copy.Address = addr
-				newArcs = append(newArcs, copy)
+				cpy.Address = addr
+				newArcs = append(newArcs, cpy)
 			}
 		}
 	}

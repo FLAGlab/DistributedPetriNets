@@ -92,6 +92,7 @@ func (pn *petriNode) incStep() {
 
 func (pn *petriNode) resetStep() {
 	pn.step = ASK_STEP
+	// pn.contextToAddrs = make(map[string][]string)
 }
 
 func (pn *petriNode) resetLastMsgTo() {
@@ -514,6 +515,9 @@ func (pn *petriNode) printPetriNet(baseMsg petriMessage) {
 	pn.node.Broadcast(baseMsg)
 	pn.showPetriNetCurrentState()
 	pn.incStep()
+	pn.contextToAddrs = make(map[string][]string)
+	pn.addrsToContext = make(map[string]string)
+	pn.updateCtx(baseMsg)
 }
 
 func (pn *petriNode) broadcastWithTimeout(msg petriMessage, successCallback, timeoutCallback func()) {
@@ -579,6 +583,8 @@ func (pn *petriNode) processMessage(pMsg petriMessage, baseMsg petriMessage) {
 }
 
 func (pn *petriNode) updateCtx(pMsg petriMessage) {
+	fmt.Printf("_WILL UPDATE CTX WITH: %v\n", pMsg)
+	fmt.Printf("_ctx b4: %v\n", pn.contextToAddrs)
 	ctx := pMsg.PetriContext
 	addr := pMsg.Address
 	oldCtx, exists := pn.addrsToContext[addr]
@@ -590,6 +596,7 @@ func (pn *petriNode) updateCtx(pMsg petriMessage) {
 		pn.contextToAddrs[ctx] = removeStringList(ctx, pn.contextToAddrs[ctx])
 		pn.contextToAddrs[ctx] = append(pn.contextToAddrs[ctx], addr)
 	}
+	fmt.Printf("_ctx after: %v\n", pn.contextToAddrs)
 }
 
 func removeStringList(elem string, list []string) []string {
