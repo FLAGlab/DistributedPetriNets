@@ -102,18 +102,28 @@ func (rn *RaftNode) print() {
   rn.pNode.printPetriNet(rn.generateBaseMessage())
 }
 
+func (rn *RaftNode) checkConflictedStep() {
+  rn.pNode.checkConflictedStep(rn.generateBaseMessage())
+}
+
+func (rn *RaftNode) isWaitingMessage() bool {
+  return rn.pNode.step == RECEIVING_MARKS_STEP || rn.pNode.step == RECEIVING_TRANSITIONS_STEP || rn.pNode.step == RECEIVING_CONFLICTED_MARKS_STEP
+}
+
 // Listen Function that listens to the channel
 func (rn *RaftNode) Listen() {
   for rn.run {
     fmt.Printf("STARTED ITERATION AS %v\n", rn.nodeType)
     if rn.nodeType == Leader {
-      for rn.pNode.step != RECEIVING_TRANSITIONS_STEP && rn.pNode.step != RECEIVING_MARKS_STEP {
+      for !rn.isWaitingMessage() {
         fmt.Printf("IS LEADER AT STEP: %v\n", rn.pNode.step)
         switch rn.pNode.step {
         case ASK_STEP:
           rn.ask()
         case PREPARE_FIRE_STEP:
           rn.prepareFire()
+        case CHECK_CONFLICTED_STEP:
+          rn.checkConflictedStep()
         case FIRE_STEP:
           rn.fire()
         case PRINT_STEP:
@@ -158,11 +168,14 @@ func (rn *RaftNode) processLeader(pMsg petriMessage) {
   } else if pMsg.Term == rn.currentTerm {
     rn.pNode.updateCtx(pMsg)
     rn.pNode.updateMaxPriority(pMsg)
+    rn.pNode.updateNeedsToCheckForConflictedState(pMsg)
     switch rn.pNode.step {
     case RECEIVING_TRANSITIONS_STEP:
       rn.pNode.getTransition(pMsg)
     case RECEIVING_MARKS_STEP:
       rn.pNode.getPlaceMarks(pMsg)
+    case RECEIVING_CONFLICTED_MARKS_STEP:
+      rn.pNode.getPlaceConflictedMarks(pMsg, rn.generateBaseMessage())
     }
   }
 }
@@ -275,7 +288,8 @@ func (rn *RaftNode) generateBaseMessage() petriMessage {
     Term: rn.currentTerm,
     PetriContext: rn.pNode.petriNet.Context,
     FromType: rn.nodeType,
-    AskedPriority: rn.pNode.priorityToAsk}
+    AskedPriority: rn.pNode.priorityToAsk,
+    iveBeenFired: rn.pNode.petriNet.HasBeenFired()}
 }
 
 func (rn *RaftNode) generateMessageWithCommand(command CommandType) petriMessage {

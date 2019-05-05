@@ -14,10 +14,12 @@ type LeaderStep int
 const (
 	ASK_STEP LeaderStep = 0
 	RECEIVING_TRANSITIONS_STEP LeaderStep = 1
-	PREPARE_FIRE_STEP LeaderStep = 2
-	RECEIVING_MARKS_STEP LeaderStep = 3
-	FIRE_STEP LeaderStep = 4
-	PRINT_STEP LeaderStep = 5
+	CHECK_CONFLICTED_STEP LeaderStep = 2
+	RECEIVING_CONFLICTED_MARKS_STEP LeaderStep = 3
+	PREPARE_FIRE_STEP LeaderStep = 4
+	RECEIVING_MARKS_STEP LeaderStep = 5
+	FIRE_STEP LeaderStep = 6
+	PRINT_STEP LeaderStep = 7
 
 	UNIVERSAL_PN string = "universal"
 )
@@ -54,6 +56,8 @@ type petriNode struct {
 	maxPriority int
 	lastMsgTo string
 	transitionPicker RandomTransitionPicker
+	didFire bool
+	needsToCheckForConflictedState bool
 }
 
 type RandomTransitionPicker func(map[string][]*petrinet.Transition) (*petrinet.Transition, string)
@@ -87,12 +91,15 @@ func (pn *petriNode) SetUniversalPetriNet(upn *petrinet.PetriNet) {
 }
 
 func (pn *petriNode) incStep() {
-	pn.step = (pn.step + 1) % (PRINT_STEP + 1)
+	if pn.step == RECEIVING_TRANSITIONS_STEP && (!pn.didFire || !pn.needsToCheckForConflictedState) {
+		pn.step = PREPARE_FIRE_STEP // skip conflicted steps
+	} else {
+		pn.step = (pn.step + 1) % (PRINT_STEP + 1)
+	}
 }
 
 func (pn *petriNode) resetStep() {
 	pn.step = ASK_STEP
-	// pn.contextToAddrs = make(map[string][]string)
 }
 
 func (pn *petriNode) resetLastMsgTo() {
@@ -236,8 +243,7 @@ func (pn *petriNode) saveMarks(addr string, placeID int, rmtArc *petrinet.Remote
 	placeMap[placeID] = rmtArc
 }
 
-func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
-	fmt.Println("RECEIVED A MARK MSG")
+func (pn *petriNode) saveAllMarksAndUpdateMissing(pMsg petriMessage) {
 	if pMsg.Command != MarksCommand {
 		fmt.Printf("Expected marks, received something else: %v HERE\n", pMsg.Command)
 		pn.resetStep()
@@ -246,15 +252,16 @@ func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
 	for _, rmtArc := range pMsg.RemoteArcs {
 		pn.saveMarks(pMsg.Address, rmtArc.PlaceID, rmtArc)
 	}
-	fmt.Printf("CURR ADDRESS: %v\n", pMsg.Address)
-	fmt.Printf("ADDRESS MISSING: %v\n", pn.addressMissing)
-	fmt.Printf("MARKS: %v\n", pn.marks)
 	_, present := pn.addressMissing[pMsg.Address]
 	if present {
-		fmt.Println("WILL DELETE FROM ADRESS MISSING")
 		pn.verifiedRemoteAddrs = append(pn.verifiedRemoteAddrs, pMsg.Address)
 		delete(pn.addressMissing, pMsg.Address)
 	}
+}
+
+func (pn *petriNode) getPlaceMarks(pMsg petriMessage) {
+	fmt.Println("RECEIVED A MARK MSG")
+	pn.saveAllMarksAndUpdateMissing(pMsg)
 	fmt.Printf("ADDRESS MISSING AFTER DELETION: %v\n", pn.addressMissing)
 	if len(pn.addressMissing) == 0 {
 		if !pn.validateRemoteTransitionMarks() {
@@ -285,6 +292,8 @@ func (pn *petriNode) requestTemporalPlacesRollback(baseMsg petriMessage) {
 // after receiving all valid transitions, do this first and wait for askedAddrs to respond
 func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 	fmt.Println("PRERAREFIRE METH CALLED")
+	pn.needsToCheckForConflictedState = false
+	pn.didFire = false
 	transition, peerAddr := pn.selectTransition()
 	if transition == nil {
 		fmt.Println("_NO TRANSITION TO SELECT")
@@ -474,7 +483,15 @@ func (pn *petriNode) fireTransition(baseMsg petriMessage) error {
 	return err
 }
 
+func (pn *petriNode) reInitPetriNode(baseMsg petriMessage) {
+	pn.contextToAddrs = make(map[string][]string)
+	pn.addrsToContext = make(map[string]string)
+	pn.marks = make(map[string]map[int]*petrinet.RemoteArc)
+	pn.updateCtx(baseMsg)
+}
+
 func (pn *petriNode) ask(baseMsg petriMessage) {
+	pn.reInitPetriNode(baseMsg)
 	baseMsg.Command = TransitionCommand
 	success := func() {
 		fmt.Println("Broadcast ask done correctly")
@@ -515,9 +532,6 @@ func (pn *petriNode) printPetriNet(baseMsg petriMessage) {
 	pn.node.Broadcast(baseMsg)
 	pn.showPetriNetCurrentState()
 	pn.incStep()
-	pn.contextToAddrs = make(map[string][]string)
-	pn.addrsToContext = make(map[string]string)
-	pn.updateCtx(baseMsg)
 }
 
 func (pn *petriNode) broadcastWithTimeout(msg petriMessage, successCallback, timeoutCallback func()) {
@@ -607,4 +621,63 @@ func removeStringList(elem string, list []string) []string {
 		}
 	}
 	return ans
+}
+
+func (pn *petriNode) updateNeedsToCheckForConflictedState(pMsg petriMessage) {
+	pn.needsToCheckForConflictedState = pn.needsToCheckForConflictedState || pMsg.imNew
+	pn.didFire = pn.didFire || (pMsg.imNew && pMsg.iveBeenFired)
+}
+
+func (pn *petriNode) checkConflictedStep(baseMsg petriMessage) {
+		var placesToAskByAddress map[string][]int
+		var connectedAddrs map[string]bool
+		placesToAskByAddress = pn.getPossibleConflictPlacesByAddress()
+		for addr, places := range placesToAskByAddress {
+			msgCopy := baseMsg
+			msgCopy.RemoteArcs = make([]*petrinet.RemoteArc, len(places))
+			for i, p := range places {
+				msgCopy.RemoteArcs[i] = &petrinet.RemoteArc{PlaceID: p}
+			}
+			var err error
+			if addr == pn.node.ExternalAddress() {
+				pn.petriNet.CopyPlaceMarksToRemoteArc(msgCopy.RemoteArcs)
+				for _, rmtArc := range msgCopy.RemoteArcs {
+					pn.saveMarks(addr, rmtArc.PlaceID, rmtArc) // ADDR, PLACE ID, RMT ARC
+				}
+				pn.verifiedRemoteAddrs = append(pn.verifiedRemoteAddrs, addr)
+			} else {
+				err = pn.SendMessageByAddress(msgCopy, addr)
+				if err == nil {
+					connectedAddrs[addr] = true
+				}
+			}
+		}
+		pn.addressMissing = connectedAddrs
+}
+
+func (pn *petriNode) getPlaceConflictedMarks(pMsg petriMessage, baseMsg petriMessage) {
+	 pn.saveAllMarksAndUpdateMissing(pMsg)
+	 if len(pn.addressMissing) == 0 {
+		 // check if conflict.
+		 conflictedAddrs := pn.getConflictedAddrs()
+		 if len(conflictedAddrs) > 0 {
+			 pn.rollBackByAddress(conflictedAddrs, baseMsg)
+			 pn.step = CHECK_CONFLICTED_STEP
+		 } else {
+			 pn.incStep()
+			 pn.resetStep() // everything ok, should start from ask
+			 pn.didFire = false
+			 pn.needsToCheckForConflictedState = false
+		 }
+	 }
+}
+
+func (pn *petriNode) getConflictedAddrs() map[string]bool {
+	// TODO: complete.
+	return nil
+}
+
+func (pn *petriNode) getPossibleConflictPlacesByAddress() map[string][]int {
+	// TODO: Complete.
+	return nil
 }

@@ -709,3 +709,24 @@ func TestGenerateUniversalTransitions(t *testing.T) {
       }
     }
 }
+
+func TestHasBeenFired(t *testing.T) {
+  pn := Init(1, "ctx1")
+  pn.AddTransition(3, 2)
+  pn.AddPlace(1, 1, "")
+  pn.AddPlace(2, 2, "")
+  pn.AddPlace(3, 5, "")
+  pn.AddPlace(4, 0, "")
+  pn.AddPlace(5, 1, "")
+  pn.AddPlace(6, 0, "")
+  pn.AddInArc(1, 3, 1)
+  pn.AddInArc(2, 3, 2)
+  pn.AddInArc(3, 3, 3)
+  pn.AddOutArc(3, 4, 3)
+  pn.AddOutArc(3, 5, 2)
+  pn.AddOutArc(3, 6, 3)
+  pn.FireTransitionByID(3)
+  if !pn.HasBeenFired() {
+    t.Error("Should have been fired")
+  }
+}

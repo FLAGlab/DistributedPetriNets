@@ -301,6 +301,10 @@ func (pn *PetriNet) GenerateUniversalTransitionsByPriority(ctxtMap map[string][]
   return transitions, idToRmtTransition
 }
 
+func (pn *PetriNet) HasBeenFired() bool {
+  return len(pn.marksHistory) > 0
+}
+
 /*
 Hacer ejercicio de mutual exclution distribuido
 que pasa si se conecta en medio de elegir y fire
