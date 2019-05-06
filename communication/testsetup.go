@@ -133,3 +133,9 @@ func setUpTestPetriNodes(pnets []*petrinet.PetriNet, leaderId int) (*connections
   }
   return &connections, leaderPeer
 }
+
+func (cm *connectionsMap) setUniversalPetriNet(universal *petrinet.PetriNet) {
+  for _, node := range cm.nodes {
+    node.rftNode.pNode.SetUniversalPetriNet(universal)
+  }
+}

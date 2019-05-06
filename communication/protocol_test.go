@@ -858,7 +858,18 @@ func TestRollBackTemporalPlacesOnOther(t *testing.T) {
 }
 
 func TestUniversalRemoteTransitionCanFire(t *testing.T) {
-  // TODO: add test
+  pn := simpleTestPetriNet(1, "ctx1")
+  pn2 := simpleTestPetriNet(2, "ctx2")
+  pn3 := simpleTestPetriNet(3, "ctx2")
+  pList := []*petrinet.PetriNet{pn, pn2, pn3}
+  cm, leader := setUpTestPetriNodes(pList, pn.ID)
+  deferFunc := initListen(cm, leader)
+  defer deferFunc()
+  universalPN := petrinet.Init(1, "universal")
+  universalPN.AddTransition(1)
+  universalPN.AddRemoteTransition(1)
+  // universalPN.AddRemoteInArc()
+  cm.setUniversalPetriNet(universalPN)
 }
 
 func TestUniversalRemoteTransitionCantFire(t *testing.T) {
