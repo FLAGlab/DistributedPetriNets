@@ -881,5 +881,99 @@ func TestConflictFlow(t *testing.T) {
 }
 
 func TestRollBackByAddress(t *testing.T) {
-  // TODO: add tests
+  pn := simpleTestPetriNet(1, "ctx1")
+  pList := []*petrinet.PetriNet{
+    pn,
+    simpleTestPetriNet(2, "ctx1"),
+    simpleTestPetriNet(3, "ctx1")}
+
+  cm, leader := setUpTestPetriNodes(pList, 1)
+  deferFunc := initListen(cm, leader)
+  defer deferFunc()
+  picker := pnTransitionPicker{1, fmt.Sprintf("addr_%v", 1)}
+  leader.rftNode.pNode.transitionPicker = func(options map[string][]*petrinet.Transition) (*petrinet.Transition, string) {
+    return picker.pick(options)
+  }
+
+  leader.rftNode.ask()
+
+  // Expects msg from 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  // done, should go to next step
+
+  leader.rftNode.prepareFire()
+
+  // done, should go to next step
+  leader.rftNode.fire()
+
+  leader.rftNode.print()
+
+  picker.updatePick(1, "addr_2")
+
+  leader.rftNode.ask()
+
+  // Expects msg from 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  // done, should go to next step
+
+  leader.rftNode.prepareFire()
+
+  // done, should go to next step
+  leader.rftNode.fire()
+
+  leader.rftNode.print()
+
+  picker.updatePick(1, "addr_3")
+
+  leader.rftNode.ask()
+
+  // Expects msg from 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  // done, should go to next step
+
+  leader.rftNode.prepareFire()
+
+  // done, should go to next step
+  leader.rftNode.fire()
+
+  leader.rftNode.print()
+
+
+  rollbacks := make(map[string]bool)
+  rollbacks["addr_2"]=true
+  rollbacks["addr_1"]=true
+  leader.rftNode.pNode.rollBackByAddress(rollbacks,leader.rftNode.generateBaseMessage())
+
+  leader.rftNode.print()
+  // p1 -1-> t1 -2-> p2 -2-> t2 -3-> p3
+  // p1 : inital = 5
+
+  expected := make(map[string]map[int]int) 
+  expected["addr_1"] = map[int]int {s
+    1: 5,
+    2: 0,
+    3: 0}
+  expected["addr_2"] = map[int]int {
+    1: 5,
+    2: 0,
+    3: 0}
+  expected["addr_3"] = map[int]int {
+    1: 4,
+    2: 2,
+    3: 0}
+  //xx
+  fmt.Println("llegue aca")
+  for addr, marks := range expected {
+    otherPn := cm.nodes[addr].rftNode.pNode.petriNet
+    t.Logf("Address: %v And pn: %v\n",addr,otherPn)
+    for pID, mark := range marks {
+      result := otherPn.GetPlace(pID).GetMarks()
+      if  result != mark {
+        t.Errorf("In address %v expected %v in place %v but found %v", addr, mark, pID, result)
+      }
+    }
+  }
 }

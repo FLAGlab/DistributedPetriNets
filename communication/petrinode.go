@@ -437,7 +437,15 @@ func (pn *petriNode) fireRemoteTransition(t *petrinet.RemoteTransition, isUniver
 func (pn *petriNode) rollBackByAddress(addrMap map[string]bool, baseMsg petriMessage) {
 	baseMsg.Command = RollBackCommand
 	for peerAddr := range addrMap {
-		pn.SendMessageByAddress(baseMsg, peerAddr)
+		fmt.Printf("_HERE_ address: %v\n",peerAddr)
+		if peerAddr != pn.node.ExternalAddress() {
+			pn.SendMessageByAddress(baseMsg, peerAddr)
+		} else {
+			err := pn.petriNet.RollBack()
+			if err != nil {
+				fmt.Printf("Tried to rollback a lot got: %v\n", err)
+			}
+		}
 	}
 }
 
