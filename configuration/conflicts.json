@@ -1,0 +1,10 @@
+{
+	"conflicts" : [
+		{
+			"ctxA": "ctx1",
+			"ctxB": "ctx1",
+			"placeA": 1,
+			"placeB": 1,
+		}
+	]
+}

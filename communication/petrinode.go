@@ -58,6 +58,8 @@ type petriNode struct {
 	transitionPicker RandomTransitionPicker
 	didFire bool
 	needsToCheckForConflictedState bool
+	conflictSolver ConflictSolver
+
 }
 
 type RandomTransitionPicker func(map[string][]*petrinet.Transition) (*petrinet.Transition, string)
@@ -79,7 +81,8 @@ func InitPetriNode(node CommunicationNode, petriNet *petrinet.PetriNet) *petriNo
 			tOptions := options[chosenKey]
 			transitionIndex := getRand(len(tOptions))
 			return tOptions[transitionIndex], chosenKey
-		}}
+		},
+		conflictSolver: InitCS()}
 }
 
 // SetUniversalPetriNet adds a petri net whose purpose is to keep remote Transitions
@@ -674,10 +677,10 @@ func (pn *petriNode) getPlaceConflictedMarks(pMsg petriMessage, baseMsg petriMes
 
 func (pn *petriNode) getConflictedAddrs() map[string]bool {
 	// TODO: complete.
-	return nil
+	return pn.conflictSolver.GetConflictedAddrs(pn.marks, pn.contextToAddrs)
 }
 
 func (pn *petriNode) getPossibleConflictPlacesByAddress() map[string][]int {
 	// TODO: Complete.
-	return nil
+	return pn.conflictSolver.GetRequiredPlacesByAddress(pn.contextToAddrs)
 }
