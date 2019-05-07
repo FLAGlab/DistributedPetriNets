@@ -113,7 +113,9 @@ func (pn *petriNode) initTransitionOptions() {
 	pn.transitionOptions = make(map[string][]*petrinet.Transition)
 	pn.remoteTransitionOptions = make(map[string]map[int]*petrinet.RemoteTransition)
 	pn.transitionOptions[pn.node.ExternalAddress()], pn.remoteTransitionOptions[pn.node.ExternalAddress()] = pn.petriNet.GetTransitionOptionsByPriority(pn.priorityToAsk)
+}
 
+func (pn *petriNode) updateUniversalTransitionOptions() {
 	if pn.universalPetriNet != nil {
 		pn.transitionOptions[UNIVERSAL_PN], pn.remoteTransitionOptions[UNIVERSAL_PN] = pn.universalPetriNet.GenerateUniversalTransitionsByPriority(pn.contextToAddrs, pn.priorityToAsk)
 	}
@@ -147,6 +149,7 @@ func (pn *petriNode) getTransition(pMsg petriMessage) {
 	numDone := pn.addTransitionOption(pMsg.Address, pMsg.Transitions, pMsg.RemoteTransitions)
 	expected := pn.node.CountPeers() + 1 // including me
 	if numDone == expected {
+		pn.updateUniversalTransitionOptions()
 		pn.incStep()
 	}
 }

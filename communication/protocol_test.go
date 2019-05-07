@@ -865,15 +865,122 @@ func TestUniversalRemoteTransitionCanFire(t *testing.T) {
   cm, leader := setUpTestPetriNodes(pList, pn.ID)
   deferFunc := initListen(cm, leader)
   defer deferFunc()
+  leader.rftNode.pNode.transitionPicker = func(options map[string][]*petrinet.Transition) (*petrinet.Transition, string) {
+    if len(options[UNIVERSAL_PN]) != 2 {
+      val, ok := options[UNIVERSAL_PN]
+      t.Errorf("Expected options of universal petri net to have at least 2. Is: %v, Exists: %v, All options: %v\n", val, ok, options)
+      return nil, ""
+    }
+    chosenIndex := 0
+    rmtOptions := leader.rftNode.pNode.remoteTransitionOptions[UNIVERSAL_PN]
+    for index, option := range rmtOptions {
+      if option.InArcs[0].Address == "addr_1" && option.OutArcs[0].Address == "addr_2" {
+        chosenIndex = index
+      }
+    }
+    return options[UNIVERSAL_PN][chosenIndex], UNIVERSAL_PN
+  }
   universalPN := petrinet.Init(1, "universal")
-  universalPN.AddTransition(1)
+  universalPN.AddTransition(1, 0)
   universalPN.AddRemoteTransition(1)
-  // universalPN.AddRemoteInArc()
+  universalPN.AddRemoteInArc(1, 1, 2, "ctx1")
+  universalPN.AddRemoteOutArc(1, 2, 3, "ctx2")
   cm.setUniversalPetriNet(universalPN)
+  if leader.rftNode.pNode.universalPetriNet == nil {
+    t.Error("A universal petri net should exist on leader")
+  } else {
+    t.Log("leader has a universal petri net")
+  }
+
+  leader.rftNode.ask()
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.prepareFire()
+  if leader.rftNode.pNode.step == ASK_STEP {
+    t.Errorf("Expected to have chosen a transition")
+  } else {
+    leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+    leader.rftNode.fire()
+    leader.rftNode.print()
+  }
+
+  expected := make(map[string]map[int]int)
+  expected["addr_1"] = map[int]int {
+    1: 3,
+    2: 0,
+    3: 0}
+  expected["addr_2"] = map[int]int {
+    1: 5,
+    2: 3,
+    3: 0}
+  expected["addr_3"] = map[int]int {
+    1: 5,
+    2: 0,
+    3: 0}
+  for addr, marks := range expected {
+    otherPn := cm.nodes[addr].rftNode.pNode.petriNet
+    t.Logf("Address: %v And pn: %v\n",addr,otherPn)
+    for pID, mark := range marks {
+      result := otherPn.GetPlace(pID).GetMarks()
+      if  result != mark {
+        t.Errorf("In address %v expected %v in place %v but found %v", addr, mark, pID, result)
+      }
+    }
+  }
 }
 
 func TestUniversalRemoteTransitionCantFire(t *testing.T) {
-  // TODO: add test
+  pn := simpleTestPetriNet(1, "ctx1")
+  pn2 := simpleTestPetriNet(2, "ctx2")
+  pn3 := simpleTestPetriNet(3, "ctx2")
+  pList := []*petrinet.PetriNet{pn, pn2, pn3}
+  cm, leader := setUpTestPetriNodes(pList, pn.ID)
+  deferFunc := initListen(cm, leader)
+  defer deferFunc()
+  leader.rftNode.pNode.transitionPicker = func(options map[string][]*petrinet.Transition) (*petrinet.Transition, string) {
+    if len(options[UNIVERSAL_PN]) != 2 {
+      val, ok := options[UNIVERSAL_PN]
+      t.Errorf("Expected options of universal petri net to have at least 2. Is: %v, Exists: %v, All options: %v\n", val, ok, options)
+      return nil, ""
+    }
+    chosenIndex := 0
+    rmtOptions := leader.rftNode.pNode.remoteTransitionOptions[UNIVERSAL_PN]
+    for index, option := range rmtOptions {
+      if option.InArcs[0].Address == "addr_1" && option.OutArcs[0].Address == "addr_2" {
+        chosenIndex = index
+      }
+    }
+    return options[UNIVERSAL_PN][chosenIndex], UNIVERSAL_PN
+  }
+  universalPN := petrinet.Init(1, "universal")
+  universalPN.AddTransition(1, 0)
+  universalPN.AddRemoteTransition(1)
+  universalPN.AddRemoteInArc(1, 1, 2, "ctx1")
+  universalPN.AddRemoteOutArc(1, 2, 3, "ctx2")
+  universalPN.AddRemoteInhibitorArc(1, 1, 1, "ctx2")
+  cm.setUniversalPetriNet(universalPN)
+  if leader.rftNode.pNode.universalPetriNet == nil {
+    t.Error("A universal petri net should exist on leader")
+  } else {
+    t.Log("leader has a universal petri net")
+    test := map[string][]string{
+      "ctx1": []string{"addr1"},
+      "ctx2": []string{"addr2", "addr3"}}
+    t.Log(universalPN.GenerateUniversalTransitionsByPriority(test, 0))
+  }
+
+  leader.rftNode.ask()
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  leader.rftNode.prepareFire()
+  if leader.rftNode.pNode.step == ASK_STEP {
+    t.Errorf("Expected to have chosen a transition")
+  } else {
+    leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+    if leader.rftNode.pNode.step != PREPARE_FIRE_STEP {
+      t.Errorf("Expected to be on prepare fire step (%v) but was %v", PREPARE_FIRE_STEP, leader.rftNode.pNode.step)
+    }
+  }
 }
 
 func TestConflictFlow(t *testing.T) {
@@ -951,8 +1058,8 @@ func TestRollBackByAddress(t *testing.T) {
   // p1 -1-> t1 -2-> p2 -2-> t2 -3-> p3
   // p1 : inital = 5
 
-  expected := make(map[string]map[int]int) 
-  expected["addr_1"] = map[int]int {s
+  expected := make(map[string]map[int]int)
+  expected["addr_1"] = map[int]int {
     1: 5,
     2: 0,
     3: 0}
