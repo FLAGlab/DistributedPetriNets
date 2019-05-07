@@ -866,7 +866,80 @@ func TestUniversalRemoteTransitionCantFire(t *testing.T) {
 }
 
 func TestConflictFlow(t *testing.T) {
-  // TODO: add test
+
+  //crear redes 
+  pn := petrinet.Init(1, "ctx1")
+  pn.AddPlace(1, 1, "")
+  pn.AddPlace(2, 0, "")
+  pn.AddTransition(1, 1)
+  pn.AddInArc(1, 1, 1)
+  pn.AddOutArc(1, 2, 1)
+  pn2 := petrinet.Init(2, "ctx2")
+  pn2.AddPlace(1, 1, "")
+  pn2.AddPlace(2, 0, "")
+  pn2.AddTransition(1, 1)
+  pn2.AddInArc(1, 1, 1)
+  pn2.AddOutArc(1, 2, 1)
+
+  //crear estados conflictivos
+  pn.FireTransitionByID(1)
+  pn2.FireTransitionByID(1)
+  
+
+  //inhibitor arcs
+  pn.AddRemoteTransition(1)
+  pn2.AddRemoteTransition(1)
+  pn.AddRemoteInhibitorArc(2, 1, 1, "ctx2")
+  pn2.AddRemoteInhibitorArc(2, 1, 1, "ctx1")
+  // t1 -> p1(t) -> t2(inhib blocks this) -> p2
+  pList := []*petrinet.PetriNet{pn, pn2}
+  cm, leader := setUpTestPetriNodes(pList, pn.ID)
+  leader.rftNode.AddConflict("ctx1","ctx2",2,2)
+  deferFunc := initListen(cm, leader)
+  defer deferFunc()
+
+  
+
+  if leader.rftNode.pNode.step != ASK_STEP {
+    t.Errorf(stepErrMsg, "ASK_STEP", ASK_STEP, leader.rftNode.pNode.step)
+  }
+  leader.rftNode.ask()
+  if leader.rftNode.pNode.step != RECEIVING_TRANSITIONS_STEP {
+    t.Errorf(stepErrMsg, "RECEIVING_TRANSITIONS_STEP", RECEIVING_TRANSITIONS_STEP, leader.rftNode.pNode.step)
+  }
+  // should receive transitions from nodes 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+
+  if leader.rftNode.pNode.step != CHECK_CONFLICTED_STEP {
+    t.Errorf(stepErrMsg, "CHECK_CONFLICTED_STEP", CHECK_CONFLICTED_STEP, leader.rftNode.pNode.step)
+  }
+
+  leader.rftNode.checkConflictedStep()
+
+  if leader.rftNode.pNode.step != RECEIVING_CONFLICTED_MARKS_STEP {
+    t.Errorf(stepErrMsg, "RECEIVING_CONFLICTED_MARKS_STEP", RECEIVING_CONFLICTED_MARKS_STEP, leader.rftNode.pNode.step)
+  }
+
+   leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+
+   if leader.rftNode.pNode.step != CHECK_CONFLICTED_STEP {
+     t.Errorf(stepErrMsg, "CHECK_CONFLICTED_STEP", CHECK_CONFLICTED_STEP, leader.rftNode.pNode.step)
+   }
+
+  leader.rftNode.print()
+
+  expectedMarks := make(map[string][]int)
+  expectedMarks["addr_1"] = []int{1, 0} //from, to
+  expectedMarks["addr_2"] = []int{1, 0}
+  for addr, marks := range expectedMarks {
+    otherPn := cm.nodes[addr].rftNode.pNode.petriNet
+    if otherPn.GetPlace(1).GetMarks() != marks[0] {
+      t.Errorf(placeErrMsg, 1, addr, marks[0], otherPn.GetPlace(1).GetMarks())
+    }
+    if otherPn.GetPlace(2).GetMarks() != marks[1] {
+      t.Errorf(placeErrMsg, 2, addr, marks[1], otherPn.GetPlace(2).GetMarks())
+    }
+  }
 }
 
 func TestRollBackByAddress(t *testing.T) {
@@ -941,7 +1014,7 @@ func TestRollBackByAddress(t *testing.T) {
   // p1 : inital = 5
 
   expected := make(map[string]map[int]int) 
-  expected["addr_1"] = map[int]int {s
+  expected["addr_1"] = map[int]int {
     1: 5,
     2: 0,
     3: 0}

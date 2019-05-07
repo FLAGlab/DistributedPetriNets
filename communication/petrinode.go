@@ -526,7 +526,7 @@ func (pn *petriNode) SendMessageByAddress(msgToSend petriMessage, peerAddr strin
 		msgToSend.imNew = true
 		pn.lastMsgTo = peerAddr
 	}
-	fmt.Printf("WILL SEND: %v\n", msgToSend)
+	fmt.Printf("WILL SEND: %v to %v\n", msgToSend,peerAddr)
 	return peer.SendMessage(msgToSend)
 }
 
@@ -641,14 +641,17 @@ func (pn *petriNode) updateNeedsToCheckForConflictedState(pMsg petriMessage) {
 
 func (pn *petriNode) checkConflictedStep(baseMsg petriMessage) {
 		var placesToAskByAddress map[string][]int
-		var connectedAddrs map[string]bool
+		connectedAddrs := make(map[string]bool)
 		placesToAskByAddress = pn.getPossibleConflictPlacesByAddress()
 		for addr, places := range placesToAskByAddress {
 			msgCopy := baseMsg
+			msgCopy.Command = MarksCommand
 			msgCopy.RemoteArcs = make([]*petrinet.RemoteArc, len(places))
+			fmt.Printf("Places are %v\n",places)
 			for i, p := range places {
 				msgCopy.RemoteArcs[i] = &petrinet.RemoteArc{PlaceID: p}
 			}
+			fmt.Printf("Msg is %v\n",msgCopy)
 			var err error
 			if addr == pn.node.ExternalAddress() {
 				pn.petriNet.CopyPlaceMarksToRemoteArc(msgCopy.RemoteArcs)
@@ -664,13 +667,19 @@ func (pn *petriNode) checkConflictedStep(baseMsg petriMessage) {
 			}
 		}
 		pn.addressMissing = connectedAddrs
+		pn.incStep()
 }
 
 func (pn *petriNode) getPlaceConflictedMarks(pMsg petriMessage, baseMsg petriMessage) {
+	 fmt.Printf("LLEGO ACA CON MSG %v\n",pMsg)
+	 fmt.Printf("LOS MISSINGS SON %v\n",pn.addressMissing)
 	 pn.saveAllMarksAndUpdateMissing(pMsg)
+	 fmt.Printf("LOS MISSINGS SON %v\n",pn.addressMissing)
 	 if len(pn.addressMissing) == 0 {
 		 // check if conflict.
 		 conflictedAddrs := pn.getConflictedAddrs()
+
+		 fmt.Printf("LOS CONFLICTED ADDRESS SON %v\n",conflictedAddrs)
 		 if len(conflictedAddrs) > 0 {
 			 pn.rollBackByAddress(conflictedAddrs, baseMsg)
 			 pn.step = CHECK_CONFLICTED_STEP
@@ -685,10 +694,15 @@ func (pn *petriNode) getPlaceConflictedMarks(pMsg petriMessage, baseMsg petriMes
 
 func (pn *petriNode) getConflictedAddrs() map[string]bool {
 	// TODO: complete.
+	fmt.Printf("LOS MARKS SON %v\n",pn.marks)
 	return pn.conflictSolver.GetConflictedAddrs(pn.marks, pn.contextToAddrs)
 }
 
 func (pn *petriNode) getPossibleConflictPlacesByAddress() map[string][]int {
 	// TODO: Complete.
 	return pn.conflictSolver.GetRequiredPlacesByAddress(pn.contextToAddrs)
+}
+
+func (pn *petriNode) AddConflict(ctxa, ctxb string, pa, pb int) {
+	pn.conflictSolver.AddConflict(ctxa, ctxb, pa, pb)
 }
