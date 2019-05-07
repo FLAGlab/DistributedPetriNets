@@ -925,6 +925,15 @@ func TestConflictFlow(t *testing.T) {
    if leader.rftNode.pNode.step != CHECK_CONFLICTED_STEP {
      t.Errorf(stepErrMsg, "CHECK_CONFLICTED_STEP", CHECK_CONFLICTED_STEP, leader.rftNode.pNode.step)
    }
+   leader.rftNode.checkConflictedStep()
+   if leader.rftNode.pNode.step != RECEIVING_CONFLICTED_MARKS_STEP {
+    t.Errorf(stepErrMsg, "RECEIVING_CONFLICTED_MARKS_STEP", RECEIVING_CONFLICTED_MARKS_STEP, leader.rftNode.pNode.step)
+  }
+
+   leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  if leader.rftNode.pNode.step != ASK_STEP {
+    t.Errorf(stepErrMsg, "ASK_STEP", ASK_STEP, leader.rftNode.pNode.step)
+  }
 
   leader.rftNode.print()
 
