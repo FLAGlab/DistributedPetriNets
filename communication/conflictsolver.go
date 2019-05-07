@@ -1,6 +1,7 @@
 package communication
 
 import (
+	"fmt"
 
 	"github.com/FLAGlab/DCoPN/petrinet"
 )
@@ -40,6 +41,7 @@ func (cs *ConflictSolver) GetRequiredPlacesByAddress(ctx2address map[string][]st
 			}
 		}
 	}
+	fmt.Printf("possible places %v\n",res)
 	return res  
 }
 

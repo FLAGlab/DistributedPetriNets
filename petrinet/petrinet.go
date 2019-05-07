@@ -255,6 +255,7 @@ func (pn *PetriNet) AddRemoteOutArc(_transition, to, weight int, context string)
       Weight: weight})
 }
 func (pn *PetriNet) AddRemoteInhibitorArc(from,_transition, weight int, context string) {
+  fmt.Printf("adding remote inhibitor arc from %v in context %v, to transition %v\n",from,context,_transition)
   pn.remoteTransitions[_transition].addInhibitorArc(
     RemoteArc {
       PlaceID: from,
