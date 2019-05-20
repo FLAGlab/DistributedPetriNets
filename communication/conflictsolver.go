@@ -42,7 +42,7 @@ func (cs *ConflictSolver) GetRequiredPlacesByAddress(ctx2address map[string][]st
 		}
 	}
 	fmt.Printf("possible places %v\n",res)
-	return res  
+	return res
 }
 
 func (cs *ConflictSolver) GetConflictedAddrs(marks map[string]map[int]*petrinet.RemoteArc, ctx2address map[string][]string) map[string] bool{
@@ -63,8 +63,7 @@ func (cs *ConflictSolver) GetConflictedAddrs(marks map[string]map[int]*petrinet.
 					}
 				}
 			}
-			
 		}
 	}
-	return res 
+	return res
 }

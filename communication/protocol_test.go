@@ -532,6 +532,14 @@ func TestPriorityChangeBecauseOfInArcs(t *testing.T) {
   leader.rftNode.ask()
   // should receive transitions from node 2
   leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  if leader.rftNode.pNode.step != CHECK_CONFLICTED_STEP {
+    t.Errorf("Expected step check conflicted (%v) but was %v", CHECK_CONFLICTED_STEP, leader.rftNode.pNode.step)
+  } else {
+    leader.rftNode.checkConflictedStep()
+  }
+  leader.rftNode.ask()
+  // should receive transitions from node 2
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
   leader.rftNode.prepareFire()
   if leader.rftNode.pNode.step != FIRE_STEP {
     t.Errorf(stepErrMsg, "FIRE_STEP", FIRE_STEP, leader.rftNode.pNode.step)
@@ -703,6 +711,18 @@ func TestRollBackTemporalPlacesOnLeader(t *testing.T) {
   leader.rftNode.processLeader(<- leader.rftNode.pMsg)
   fmt.Println("_HERE_: received msg")
   leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  if leader.rftNode.pNode.step != CHECK_CONFLICTED_STEP {
+    t.Errorf("Expected step check conflicted (%v) but was %v", CHECK_CONFLICTED_STEP, leader.rftNode.pNode.step)
+  } else {
+    leader.rftNode.checkConflictedStep()
+  }
+  fmt.Println("_HERE_: will try priority 1")
+  leader.rftNode.ask()
+  fmt.Println("_HERE_: asked")
+  // should receive transitions from nodes 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  fmt.Println("_HERE_: received msg")
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
   fmt.Println("_HERE_: received other msg")
   leader.rftNode.prepareFire()
   fmt.Println("_HERE_: done preparing fire")
@@ -798,6 +818,18 @@ func TestRollBackTemporalPlacesOnOther(t *testing.T) {
   leader.rftNode.processLeader(<- leader.rftNode.pMsg)
   leader.rftNode.prepareFire()
   // should realice transitions of priority 0 cant fire, so it should try with priority 1
+  fmt.Println("_HERE_: will try priority 1")
+  leader.rftNode.ask()
+  fmt.Println("_HERE_: asked")
+  // should receive transitions from nodes 2 and 3
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  fmt.Println("_HERE_: received msg")
+  leader.rftNode.processLeader(<- leader.rftNode.pMsg)
+  if leader.rftNode.pNode.step != CHECK_CONFLICTED_STEP {
+    t.Errorf("Expected step check conflicted (%v) but was %v", CHECK_CONFLICTED_STEP, leader.rftNode.pNode.step)
+  } else {
+    leader.rftNode.checkConflictedStep()
+  }
   fmt.Println("_HERE_: will try priority 1")
   leader.rftNode.ask()
   fmt.Println("_HERE_: asked")
@@ -1140,7 +1172,7 @@ func TestRollBackByAddress(t *testing.T) {
   // p1 -1-> t1 -2-> p2 -2-> t2 -3-> p3
   // p1 : inital = 5
 
-  expected := make(map[string]map[int]int) 
+  expected := make(map[string]map[int]int)
   expected["addr_1"] = map[int]int {
     1: 5,
     2: 0,

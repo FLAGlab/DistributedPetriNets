@@ -308,6 +308,8 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		if pn.priorityToAsk < pn.maxPriority {
 			if pn.priorityToAsk == 0 {
 				pn.requestTemporalPlacesRollback(baseMsg)
+				pn.didFire = true
+				pn.needsToCheckForConflictedState = true
 			}
 			pn.priorityToAsk++
 		} else {
@@ -671,6 +673,12 @@ func (pn *petriNode) checkConflictedStep(baseMsg petriMessage) {
 		}
 		pn.addressMissing = connectedAddrs
 		pn.incStep()
+		if len(pn.addressMissing) == 0 {
+			pn.incStep()
+			pn.resetStep() // everything ok, should start from ask
+			pn.didFire = false
+			pn.needsToCheckForConflictedState = false
+		}
 }
 
 func (pn *petriNode) getPlaceConflictedMarks(pMsg petriMessage, baseMsg petriMessage) {
