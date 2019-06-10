@@ -1,0 +1,9 @@
+{
+  "exclusion": [
+    {"A": "test", "B": "test2"}
+  ],
+  "causality": [],
+  "implication": [],
+  "requirement": [],
+  "suggestion": []
+}

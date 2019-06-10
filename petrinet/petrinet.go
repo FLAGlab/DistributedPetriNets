@@ -231,11 +231,14 @@ func (pn *PetriNet) AddInhibitorArc(from,_transition,_weight int) {
 func (pn *PetriNet) AddRemoteTransition(_id int) {
   fmt.Println("will add remote transition")
   fmt.Println(_id)
-  pn.remoteTransitions[_id] = &RemoteTransition {
-    ID: _id,
-    InArcs: make([]RemoteArc,0),
-    OutArcs: make([]RemoteArc,0),
-    InhibitorArcs: make([]RemoteArc,0)}
+  _, exists := pn.remoteTransitions[_id]
+  if !exists {
+    pn.remoteTransitions[_id] = &RemoteTransition {
+      ID: _id,
+      InArcs: make([]RemoteArc,0),
+      OutArcs: make([]RemoteArc,0),
+      InhibitorArcs: make([]RemoteArc,0)}
+  }
 }
 
 func (pn *PetriNet) AddRemoteInArc(from,_transition, weight int, context string) {

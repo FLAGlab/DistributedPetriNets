@@ -8,7 +8,6 @@ import (
 	"math/rand"
 
 	"github.com/FLAGlab/DCoPN/petribuilder"
-	"github.com/FLAGlab/DCoPN/petrinet"
 	"github.com/perlin-network/noise"
 	"github.com/perlin-network/noise/cipher/aead"
 	"github.com/perlin-network/noise/handshake/ecdh"
@@ -97,7 +96,8 @@ func Run() {
 	hostFlag := flag.String("h", "127.0.0.1", "host to listen for peers on")
 	portFlag := flag.Uint("p", 3000, "port to listen for peers on")
 	leaderFlag := flag.Bool("l", false, "is leader node")
-	experimentFlag := flag.Uint("exp1", 0, "Create exp1 petri node with the given id")
+	contextName := flag.String("ctx", "", "Context name of this petri node")
+	dependencyRelationsFile := flag.String("cdr", "./configuration/cdr.json", "Json with the context dependency relations")
 	flag.Parse()
 
 	params := noise.DefaultParams()
@@ -117,21 +117,18 @@ func Run() {
 	p.Register(aead.New())
 	p.Register(skademlia.New())
 	p.Enforce(node)
-	var pnet *petrinet.PetriNet
-	if *experimentFlag != uint(0) {
-		fmt.Println("CREATED EXPERIMENT")
-		pnet = petribuilder.BuildExperiment1(int(*experimentFlag))
-	} else if *portFlag == uint(3000) {
-		fmt.Println("CREATED PETRI NET 1")
-		pnet = petribuilder.BuildPetriNet1()
-	} else if *portFlag == uint(3001) {
-		fmt.Println("CREATED PETRI NET 2")
-		pnet = petribuilder.BuildPetriNet2()
-	} else if *portFlag == uint(3002) {
-		fmt.Println("CREATED PETRI NET 3")
-		pnet = petribuilder.BuildPetriNet3()
-	}
+
+	// Build my node context petri net
+	pnet := petribuilder.CreateContext(*contextName)
+	// update pnet with the required remote arcs of the context dependency relations
+	petribuilder.UpdatePetriNetWithCDR(pnet, *dependencyRelationsFile)
+
+	// build petri node and update its universal petri net
 	pnNode := InitPetriNode(&MyCommunicationNode{node}, pnet)
+	pnNode.universalPetriNet = petribuilder.GetUniversalPetriNet(*dependencyRelationsFile)
+	// populate the pnNode conflic solver with strategies according to the context dependency relations
+	petribuilder.UpdateConflictSolverWithCDR(&pnNode.conflictSolver, *dependencyRelationsFile)
+
 	rn := InitRaftNode(pnNode, *leaderFlag)
 	defer rn.close()
 	go rn.Listen()
@@ -146,7 +143,6 @@ func Run() {
 			if err != nil {
 				panic(err)
 			}
-
 			skademlia.WaitUntilAuthenticated(peer)
 		}
 

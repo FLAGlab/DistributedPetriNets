@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/FLAGlab/DCoPN/petrinet"
+	"github.com/FLAGlab/DCoPN/petribuilder"
+	"github.com/FLAGlab/DCoPN/conflictsolver"
 )
 
 type LeaderStep int
@@ -21,7 +23,7 @@ const (
 	FIRE_STEP LeaderStep = 6
 	PRINT_STEP LeaderStep = 7
 
-	UNIVERSAL_PN string = "universal"
+	UNIVERSAL_PN string = petribuilder.UNIVERSAL_PN
 )
 
 type PeerNode interface {
@@ -58,7 +60,7 @@ type petriNode struct {
 	transitionPicker RandomTransitionPicker
 	didFire bool
 	needsToCheckForConflictedState bool
-	conflictSolver ConflictSolver
+	conflictSolver conflictsolver.ConflictSolver
 
 }
 
@@ -82,7 +84,7 @@ func InitPetriNode(node CommunicationNode, petriNet *petrinet.PetriNet) *petriNo
 			transitionIndex := getRand(len(tOptions))
 			return tOptions[transitionIndex], chosenKey
 		},
-		conflictSolver: InitCS()}
+		conflictSolver: conflictsolver.InitCS()}
 }
 
 // SetUniversalPetriNet adds a petri net whose purpose is to keep remote Transitions
@@ -306,12 +308,12 @@ func (pn *petriNode) prepareFire(baseMsg petriMessage) {
 		pn.resetStep()
 		// will retry with next priority
 		if pn.priorityToAsk < pn.maxPriority {
-			if pn.priorityToAsk == 0 {
+			pn.priorityToAsk++
+			if pn.priorityToAsk == pn.maxPriority {
 				pn.requestTemporalPlacesRollback(baseMsg)
 				pn.didFire = true
 				pn.needsToCheckForConflictedState = true
 			}
-			pn.priorityToAsk++
 		} else {
 			pn.priorityToAsk = 0
 		}
