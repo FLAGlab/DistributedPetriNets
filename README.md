@@ -26,4 +26,4 @@ DCoPN [-ctx contextName] [-p port] [-h host] [-cdr contextDependencyRelationsJso
 
 ## Running the tests
 
-Tests can be run using `go test`
+All tests can be run using `go test ./...`

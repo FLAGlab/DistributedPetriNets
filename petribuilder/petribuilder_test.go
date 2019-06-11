@@ -12,7 +12,7 @@ import (
 const TEST_CDR string = "test"
 
 func removeNoOrder(s []petrinet.RemoteTransition, i int) []petrinet.RemoteTransition {
-  s[len(s)-1], s[i] = s[i], s[len(s)-1]
+  s[i] = s[len(s)-1]
   return s[:len(s)-1]
 }
 
