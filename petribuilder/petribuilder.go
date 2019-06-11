@@ -158,8 +158,8 @@ func UpdatePetriNetWithCDR(pn *petrinet.PetriNet, cdrFile string) {
 }
 
 func UpdateConflictSolverWithCDR(cs *conflictsolver.ConflictSolver, cdrFile string) {
-  // relations := getCdrStruct(cdrFile)
   // TODO: Complete function
+  // relations := getCdrStruct(cdrFile)
   // for _, rel := range relations.exclusion {
   //
   // }
@@ -180,8 +180,10 @@ func UpdateConflictSolverWithCDR(cs *conflictsolver.ConflictSolver, cdrFile stri
 func CreateContext(contextName string) *petrinet.PetriNet {
   p := petrinet.Init(1, contextName)
   p.AddPlace(PR_PLACE, 0, "Pr(" + contextName + ")")
+  p.SetPlaceTemporal(PR_PLACE)
   p.AddPlace(CTX_PLACE, 0, contextName)
   p.AddPlace(PR_NOT_PLACE, 0, "Pr(¬" + contextName + ")")
+  p.SetPlaceTemporal(PR_NOT_PLACE)
   p.AddTransition(REQ_TR, EXTERNAL_TRANSITION_PRIORITY) // req(contextName)
   p.AddTransition(ACT_TR, INTERNAL_TRANSITION_PRIORITY) // act(contextName)
   p.AddTransition(REQ_NOT_TR, EXTERNAL_TRANSITION_PRIORITY) // req(¬contextName)
