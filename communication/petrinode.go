@@ -716,6 +716,6 @@ func (pn *petriNode) getPossibleConflictPlacesByAddress() map[string][]int {
 	return pn.conflictSolver.GetRequiredPlacesByAddress(pn.contextToAddrs)
 }
 
-func (pn *petriNode) AddConflict(ctxa, ctxb string, pa, pb int) {
-	pn.conflictSolver.AddConflict(ctxa, ctxb, pa, pb)
+func (pn *petriNode) AddConflict(ctxa, ctxb string, pa, pb, ca, cb int, ra , rb bool) {
+	pn.conflictSolver.AddConflict(ctxa, ctxb, pa, pb, ca, cb, ra, rb)
 }

@@ -8,8 +8,8 @@ import (
 
 func TestAddConflict(t *testing.T) {
   cs := InitCS()
-  cs.AddConflict("ctx1","ctx2",1,1)
-  expected := conflict{"ctx1","ctx2",1,1}
+  cs.AddConflict("ctx1","ctx2",1,1,1,1,true,true)
+  expected := conflict{"ctx1","ctx2",1,1,1,1,true,true}
   exists := false
   for _, item := range cs.conflicts {
     exists = exists || item == expected
@@ -21,8 +21,8 @@ func TestAddConflict(t *testing.T) {
 
 func TestGetRequiredPlacesByAddress(t *testing.T) {
 	cs := InitCS()
-	cs.AddConflict("ctx1","ctx2",1,2)
-	cs.AddConflict("ctx1","ctx3",2,3)
+	cs.AddConflict("ctx1","ctx2",1,2,1,1,true,true)
+	cs.AddConflict("ctx1","ctx3",2,3,1,1,true,true)
 	ctx2address := make(map[string][]string)
 	ctx2address["ctx1"] = []string{"add1","add2"}
 	ctx2address["ctx2"] = []string{"add3","add4"}
@@ -44,8 +44,8 @@ func TestGetRequiredPlacesByAddress(t *testing.T) {
 
 func TestGetConflictedAddrs(t *testing.T) {
 	cs := InitCS()
-	cs.AddConflict("ctx1","ctx2",1,2)
-	cs.AddConflict("ctx1","ctx3",2,3)
+	cs.AddConflict("ctx1","ctx2",1,2,1,1,true,true)
+	cs.AddConflict("ctx1","ctx3",2,3,1,1,true,true)
 	ctx2address := make(map[string][]string)
 	ctx2address["ctx1"] = []string{"add1","add2"}
 	ctx2address["ctx2"] = []string{"add3","add4"}
