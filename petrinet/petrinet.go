@@ -133,15 +133,12 @@ func (pn *PetriNet) FireTransitionByID(transitionID int) error {
 
 func (pn *PetriNet) CopyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
   for i, rmtArc := range remoteArcs {
-    fmt.Printf("PetrinetID: %v My places: %v\n", pn.ID, pn.places)
     remoteArcs[i].Marks = pn.places[rmtArc.PlaceID].marks
   }
 }
 
 // AddMarksToPlaces adds weight (pos or neg) to specified places
 func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteArc, saveHistory bool) {
-  fmt.Println("WILL ADD MARKS TO PLACES")
-  fmt.Printf("OLD MARKS: %v\n", pn)
   if saveHistory {
     pn.saveHistory()
   }
@@ -150,10 +147,8 @@ func (pn *PetriNet) AddMarksToPlaces(opType OperationType, remoteArcs []*RemoteA
     if opType == SUBSTRACTION {
       toAdd = -toAdd
     }
-    fmt.Printf("WILL ADD: %v\n", toAdd)
     pn.places[rmtArc.PlaceID].marks += toAdd
   }
-  fmt.Printf("NEW MARKS: %v\n", pn)
 }
 
 func (pn *PetriNet) GetTransitionOptionsByPriority(priority int) ([]*Transition, map[int]*RemoteTransition) {
@@ -229,8 +224,6 @@ func (pn *PetriNet) AddInhibitorArc(from,_transition,_weight int) {
 }
 
 func (pn *PetriNet) AddRemoteTransition(_id int) {
-  fmt.Println("will add remote transition")
-  fmt.Println(_id)
   _, exists := pn.remoteTransitions[_id]
   if !exists {
     pn.remoteTransitions[_id] = &RemoteTransition {
@@ -242,8 +235,6 @@ func (pn *PetriNet) AddRemoteTransition(_id int) {
 }
 
 func (pn *PetriNet) AddRemoteInArc(from,_transition, weight int, context string) {
-  fmt.Println("will add remote in arc")
-  fmt.Printf("%d %d %v\n", from, _transition, pn.remoteTransitions[_transition])
   pn.remoteTransitions[_transition].addInArc(
     RemoteArc {
       PlaceID: from,
@@ -258,7 +249,6 @@ func (pn *PetriNet) AddRemoteOutArc(_transition, to, weight int, context string)
       Weight: weight})
 }
 func (pn *PetriNet) AddRemoteInhibitorArc(from,_transition, weight int, context string) {
-  fmt.Printf("adding remote inhibitor arc from %v in context %v, to transition %v\n",from,context,_transition)
   pn.remoteTransitions[_transition].addInhibitorArc(
     RemoteArc {
       PlaceID: from,
