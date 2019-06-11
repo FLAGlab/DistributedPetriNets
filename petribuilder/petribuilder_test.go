@@ -86,20 +86,31 @@ func TestGetUniversalPetriNet(t *testing.T) {
   if len(rmtInternal) != 5 {
     t.Errorf("Expected universal petri net to have %v internal transitions but had %v", 5, rmtInternal)
   }
+  if len(rmtExternal) != 0 {
+    t.Errorf("Expected universal petri net to have %v internal transitions but had %v", 0, rmtExternal)
+  }
+  if len(rmtClear) != 1 {
+    t.Errorf("Expected universal petri net to have %v internal transitions but had %v", 1, rmtClear)
+  }
+}
+
+func TestGetUniversalPetriNetCausality(t *testing.T) {
+  upn := GetUniversalPetriNet(TEST_CDR)
+  _, rmtInternal := upn.GetTransitionOptionsByPriority(INTERNAL_TRANSITION_PRIORITY)
   expectedInternal := []petrinet.RemoteTransition {
-    petrinet.RemoteTransition { // from i suggest j
+    petrinet.RemoteTransition { // from c d causality
       ID: 0,
       InArcs: []petrinet.RemoteArc{
         petrinet.RemoteArc{
           PlaceID: CTX_PLACE,
-          Context: "i",
+          Context: "c",
           Address: "",
           Weight: 1,
           Marks: 0,
         },
         petrinet.RemoteArc{
           PlaceID: PR_NOT_PLACE,
-          Context: "i",
+          Context: "c",
           Address: "",
           Weight: 1,
           Marks: 0,
@@ -109,57 +120,21 @@ func TestGetUniversalPetriNet(t *testing.T) {
       InhibitorArcs: []petrinet.RemoteArc{
         petrinet.RemoteArc{
           PlaceID: CTX_PLACE,
-          Context: "j",
+          Context: "d",
           Address: "",
           Weight: 1,
           Marks: 0,
         },
       },
     },
-    petrinet.RemoteTransition { // from g h requirement
-      ID: 0,
-      InArcs: []petrinet.RemoteArc{
-        petrinet.RemoteArc{
-          PlaceID: CTX_PLACE,
-          Context: "g",
-          Address: "",
-          Weight: 1,
-          Marks: 0,
-        },
-      },
-      OutArcs: []petrinet.RemoteArc{
-        petrinet.RemoteArc{
-          PlaceID: CTX_PLACE,
-          Context: "g",
-          Address: "",
-          Weight: 1,
-          Marks: 0,
-        },
-        petrinet.RemoteArc{
-          PlaceID: PR_NOT_PLACE,
-          Context: "g",
-          Address: "",
-          Weight: 1,
-          Marks: 0,
-        },
-      },
-      InhibitorArcs: []petrinet.RemoteArc{
-        petrinet.RemoteArc{
-          PlaceID: PR_NOT_PLACE,
-          Context: "g",
-          Address: "",
-          Weight: 1,
-          Marks: 0,
-        },
-        petrinet.RemoteArc{
-          PlaceID: CTX_PLACE,
-          Context: "h",
-          Address: "",
-          Weight: 1,
-          Marks: 0,
-        },
-      },
-    },
+  }
+  helperTestGetUniversalPetriNet(rmtInternal, expectedInternal, t)
+}
+
+func TestGetUniversalPetriNetImplication(t *testing.T) {
+  upn := GetUniversalPetriNet(TEST_CDR)
+  _, rmtInternal := upn.GetTransitionOptionsByPriority(INTERNAL_TRANSITION_PRIORITY)
+  expectedInternal := []petrinet.RemoteTransition {
     petrinet.RemoteTransition { // from e f implication
       ID: 0,
       InArcs: []petrinet.RemoteArc{
@@ -233,19 +208,80 @@ func TestGetUniversalPetriNet(t *testing.T) {
         },
       },
     },
-    petrinet.RemoteTransition { // from c d causality
+  }
+  helperTestGetUniversalPetriNet(rmtInternal, expectedInternal, t)
+}
+
+func TestGetUniversalPetriNetRequirement(t *testing.T) {
+  upn := GetUniversalPetriNet(TEST_CDR)
+  _, rmtInternal := upn.GetTransitionOptionsByPriority(INTERNAL_TRANSITION_PRIORITY)
+  expectedInternal := []petrinet.RemoteTransition {
+    petrinet.RemoteTransition { // from g h requirement
       ID: 0,
       InArcs: []petrinet.RemoteArc{
         petrinet.RemoteArc{
           PlaceID: CTX_PLACE,
-          Context: "c",
+          Context: "g",
+          Address: "",
+          Weight: 1,
+          Marks: 0,
+        },
+      },
+      OutArcs: []petrinet.RemoteArc{
+        petrinet.RemoteArc{
+          PlaceID: CTX_PLACE,
+          Context: "g",
           Address: "",
           Weight: 1,
           Marks: 0,
         },
         petrinet.RemoteArc{
           PlaceID: PR_NOT_PLACE,
-          Context: "c",
+          Context: "g",
+          Address: "",
+          Weight: 1,
+          Marks: 0,
+        },
+      },
+      InhibitorArcs: []petrinet.RemoteArc{
+        petrinet.RemoteArc{
+          PlaceID: PR_NOT_PLACE,
+          Context: "g",
+          Address: "",
+          Weight: 1,
+          Marks: 0,
+        },
+        petrinet.RemoteArc{
+          PlaceID: CTX_PLACE,
+          Context: "h",
+          Address: "",
+          Weight: 1,
+          Marks: 0,
+        },
+      },
+    },
+  }
+  helperTestGetUniversalPetriNet(rmtInternal, expectedInternal, t)
+}
+
+func TestGetUniversalPetriNetSuggestion(t *testing.T) {
+  upn := GetUniversalPetriNet(TEST_CDR)
+  _, rmtInternal := upn.GetTransitionOptionsByPriority(INTERNAL_TRANSITION_PRIORITY)
+  _, rmtClear := upn.GetTransitionOptionsByPriority(CLEAR_TRANSITION_PRIORITY)
+  expectedInternal := []petrinet.RemoteTransition {
+    petrinet.RemoteTransition { // from i suggest j
+      ID: 0,
+      InArcs: []petrinet.RemoteArc{
+        petrinet.RemoteArc{
+          PlaceID: CTX_PLACE,
+          Context: "i",
+          Address: "",
+          Weight: 1,
+          Marks: 0,
+        },
+        petrinet.RemoteArc{
+          PlaceID: PR_NOT_PLACE,
+          Context: "i",
           Address: "",
           Weight: 1,
           Marks: 0,
@@ -255,7 +291,7 @@ func TestGetUniversalPetriNet(t *testing.T) {
       InhibitorArcs: []petrinet.RemoteArc{
         petrinet.RemoteArc{
           PlaceID: CTX_PLACE,
-          Context: "d",
+          Context: "j",
           Address: "",
           Weight: 1,
           Marks: 0,
@@ -263,48 +299,50 @@ func TestGetUniversalPetriNet(t *testing.T) {
       },
     },
   }
-  for id, tr := range rmtInternal {
+  helperTestGetUniversalPetriNet(rmtInternal, expectedInternal, t)
+
+  expectedClear := []petrinet.RemoteTransition {
+    petrinet.RemoteTransition {
+      ID: 0,
+      InArcs: []petrinet.RemoteArc{
+        petrinet.RemoteArc{
+          PlaceID: PR_PLACE,
+          Context: "j",
+          Address: "",
+          Weight: 1,
+          Marks: 0,
+        },
+      },
+      OutArcs: []petrinet.RemoteArc{},
+      InhibitorArcs: []petrinet.RemoteArc{},
+    },
+  }
+  helperTestGetUniversalPetriNet(rmtClear, expectedClear, t)
+}
+
+func helperTestGetUniversalPetriNet(
+    obtainedTrsRef map[int]*petrinet.RemoteTransition,
+    expectedTrs []petrinet.RemoteTransition,
+    t *testing.T) {
+  obtainedTrs := make(map[int]petrinet.RemoteTransition)
+  for k, v := range obtainedTrsRef {
+    obtainedTrs[k] = *v
+  }
+  for id, tr := range obtainedTrs {
     foundIndex := -1
-    for index, expectedTr := range expectedInternal {
+    for index, expectedTr := range expectedTrs {
       expectedTr.ID = id
-      if reflect.DeepEqual(expectedTr, *tr) {
+      if reflect.DeepEqual(expectedTr, tr) {
         foundIndex = index
         break
       }
     }
-    if foundIndex == -1 {
-      t.Errorf("Didn't expect universal petri net to have internal transition %v. Missing expected: %v", tr, expectedInternal)
-    } else {
-      removeNoOrder(expectedInternal, foundIndex)
+    if foundIndex != -1 {
+      expectedTrs = removeNoOrder(expectedTrs, foundIndex)
     }
   }
-
-  if len(rmtExternal) != 0 {
-    t.Errorf("Expected universal petri net to have %v internal transitions but had %v", 0, rmtExternal)
-  }
-  if len(rmtClear) != 1 {
-    t.Errorf("Expected universal petri net to have %v internal transitions but had %v", 1, rmtClear)
-  }
-  var clearTr petrinet.RemoteTransition
-  for _, tr := range rmtClear {
-    clearTr = *tr
-  }
-  expectedClear := petrinet.RemoteTransition {
-    ID: clearTr.ID,
-    InArcs: []petrinet.RemoteArc{
-      petrinet.RemoteArc{
-        PlaceID: PR_PLACE,
-        Context: "j",
-        Address: "",
-        Weight: 1,
-        Marks: 0,
-      },
-    },
-    OutArcs: []petrinet.RemoteArc{},
-    InhibitorArcs: []petrinet.RemoteArc{},
-  }
-  if !reflect.DeepEqual(clearTr, expectedClear) {
-    t.Errorf("Expected universal petri net to have a clear transition %v but was %v", expectedClear, clearTr)
+  if len(expectedTrs) > 0 {
+    t.Errorf("Expected to find %v but didn't. Obtained map: %v", expectedTrs, obtainedTrs)
   }
 }
 
@@ -515,10 +553,10 @@ func TestUpdateConflictSolverWithCDR(t *testing.T) {
   cs := conflictsolver.InitCS()
   UpdateConflictSolverWithCDR(&cs, TEST_CDR)
   expected := conflictsolver.InitCS()
-  expected.AddConflict("a", "b", 2, 2, 1, 1, true, true)
-  expected.AddConflict("e", "f", 2, 2, 1, 0, true, false)
-  expected.AddConflict("g", "h", 2, 2, 1, 0, true, false)
-  if !cs.Compare(&expected) {
+  expected.AddConflict("a", "b", CTX_PLACE, CTX_PLACE, 1, 1, true, true)
+  expected.AddConflict("e", "f", CTX_PLACE, CTX_PLACE, 1, 0, true, false)
+  expected.AddConflict("g", "h", CTX_PLACE, CTX_PLACE, 1, 0, true, false)
+  if !cs.Equals(&expected) {
     t.Errorf("Expected conflicts %v but was %v", expected, cs)
   }
 }
