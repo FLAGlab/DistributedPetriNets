@@ -158,7 +158,6 @@ func UpdatePetriNetWithCDR(pn *petrinet.PetriNet, cdrFile string) {
 }
 
 func UpdateConflictSolverWithCDR(cs *conflictsolver.ConflictSolver, cdrFile string) {
-  // TODO: Complete function
   relations := getCdrStruct(cdrFile)
    for _, rel := range relations.exclusion {
     cs.AddConflict(rel.a,rel.b,CTX_PLACE,CTX_PLACE,1, 1, true, true)

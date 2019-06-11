@@ -2,6 +2,7 @@ package conflictsolver
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/FLAGlab/DCoPN/petrinet"
 )
@@ -28,7 +29,9 @@ func InitCS() ConflictSolver {
 func (cs *ConflictSolver) AddConflict(ctxa, ctxb string, pa, pb, ca, cb int, ra, rb bool) {
 	cs.conflicts = append(cs.conflicts, conflict{ctxa, ctxb, pa, pb, ca, cb, ra, rb})
 }
-
+func (cs *ConflictSolver) Compare(cs2 *ConflictSolver) bool {
+	return reflect.DeepEqual(cs, cs2) 
+}
 func (cs *ConflictSolver) GetRequiredPlacesByAddress(ctx2address map[string][]string) map[string][]int {
 	res := make(map[string][]int)
 	for _,value := range cs.conflicts {

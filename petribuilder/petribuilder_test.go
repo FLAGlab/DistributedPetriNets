@@ -6,6 +6,7 @@ import (
   "testing"
 
   "github.com/FLAGlab/DCoPN/petrinet"
+  "github.com/FLAGlab/DCoPN/conflictsolver"
 )
 
 const TEST_CDR string = "test"
@@ -340,4 +341,13 @@ func TestUpdatePetriNetWithCDR(t *testing.T) {
 
 func TestUpdateConflictSolverWithCDR(t *testing.T) {
   // TODO: complete test
+  cs := conflictsolver.InitCS()
+  UpdateConflictSolverWithCDR(&cs, TEST_CDR)
+  expected := conflictsolver.InitCS()
+  expected.AddConflict("a", "b", 2, 2, 1, 1, true, true)
+  expected.AddConflict("e", "f", 2, 2, 1, 0, true, false)
+  expected.AddConflict("g", "h", 2, 2, 1, 0, true, false)
+  if !cs.Compare(&expected) {
+    t.Errorf("Expected conflicts %v but was %v", expected, cs)
+  }
 }
