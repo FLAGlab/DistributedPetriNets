@@ -1044,7 +1044,7 @@ func TestConflictFlow(t *testing.T) {
   // t1 -> p1(t) -> t2(inhib blocks this) -> p2
   pList := []*petrinet.PetriNet{pn, pn2}
   cm, leader := setUpTestPetriNodes(pList, pn.ID)
-  leader.rftNode.AddConflict("ctx1","ctx2",2,2)
+  leader.rftNode.AddConflict("ctx1","ctx2",2,2,1,1,true,true)
   deferFunc := initListen(cm, leader)
   defer deferFunc()
 

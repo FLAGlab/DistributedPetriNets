@@ -298,6 +298,6 @@ func (rn *RaftNode) generateMessageWithCommand(command CommandType) petriMessage
   return baseMsg
 }
 
-func (rn *RaftNode) AddConflict(ctxa, ctxb string, pa, pb int) {
-  rn.pNode.AddConflict(ctxa, ctxb, pa, pb)
+func (rn *RaftNode) AddConflict(ctxa, ctxb string, pa, pb, ca, cb int, ra, rb bool) {
+  rn.pNode.AddConflict(ctxa, ctxb, pa, pb, ca , cb, ra, rb)
 }

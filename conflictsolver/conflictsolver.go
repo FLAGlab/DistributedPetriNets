@@ -2,6 +2,7 @@ package conflictsolver
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/FLAGlab/DCoPN/petrinet"
 )
@@ -11,6 +12,10 @@ type conflict struct {
 	ctxB string
 	placeIdA int
 	palceIdB int
+	tokensA int
+	tokensB int
+	rollBackA bool
+	rollBackB bool
 }
 
 type ConflictSolver struct {
@@ -21,10 +26,12 @@ func InitCS() ConflictSolver {
 	return ConflictSolver{nil}
 }
 
-func (cs *ConflictSolver) AddConflict(ctxa, ctxb string, pa, pb int) {
-	cs.conflicts = append(cs.conflicts, conflict{ctxa, ctxb, pa, pb})
+func (cs *ConflictSolver) AddConflict(ctxa, ctxb string, pa, pb, ca, cb int, ra, rb bool) {
+	cs.conflicts = append(cs.conflicts, conflict{ctxa, ctxb, pa, pb, ca, cb, ra, rb})
 }
-
+func (cs *ConflictSolver) Compare(cs2 *ConflictSolver) bool {
+	return reflect.DeepEqual(cs, cs2) 
+}
 func (cs *ConflictSolver) GetRequiredPlacesByAddress(ctx2address map[string][]string) map[string][]int {
 	res := make(map[string][]int)
 	for _,value := range cs.conflicts {
@@ -52,14 +59,22 @@ func (cs *ConflictSolver) GetConflictedAddrs(marks map[string]map[int]*petrinet.
 		ctxB := value.ctxB
 		pa := value.placeIdA
 		pb := value.palceIdB
+		ca := value.tokensA
+		cb := value.tokensB
+		rA := value.rollBackA
+		rB := value.rollBackB
 		if len(ctx2address[ctxA]) > 0 && len(ctx2address[ctxB]) > 0 {
 			for _,addressA := range ctx2address[ctxA] {
 				marksA := marks[addressA][pa].Marks
 				for _,addressB := range ctx2address[ctxB] {
 					marksB := marks[addressB][pb].Marks
-					if marksA > 0 && marksB > 0 {
-						res[addressA] = true
-						res[addressB] = true
+					if marksA == ca && marksB == cb {
+						if rA {
+							res[addressA] = true	
+						}
+						if rB {
+							res[addressB] = true	
+						}
 					}
 				}
 			}
