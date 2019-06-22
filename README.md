@@ -8,7 +8,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-You will need to have Go on your machine. To get started with Go [click here](https://golang.org/doc/install). File [go.mod](https://github.com/FLAGlab/DCoPN/blob/master/go.mod) contains all the necessary libraries and requires to have the environment variable GO11MODULE set to true.
+You will need to have Go on your machine. To get started with Go [click here](https://golang.org/doc/install). File [go.mod](https://github.com/FLAGlab/DCoPN/blob/master/go.mod) contains all the necessary libraries and requires to have the environment variable GO111MODULE set to "on".
 
 ### Installing and running
 
