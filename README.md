@@ -1,6 +1,6 @@
 # DCoPN
 
-# TODO: One Paragraph of project description goes here
+<!-- TODO: One Paragraph of project description goes here -->
 
 ## Getting Started
 
@@ -23,7 +23,7 @@ That should create an executable named `DCoPN`. Now you can run it using
 ```
 DCoPN [-ctx contextName] [-p port] [-h host] [-cdr contextDependencyRelationsJsonPath] [-l leader] [peerAddress]
 ```
-# TODO: Describe what each parameter is and how the contextDependencyRelationsJson works
+<!-- TODO: Describe what each parameter is and how the contextDependencyRelationsJson works -->
 
 ## Running the tests
 
