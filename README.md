@@ -1,8 +1,12 @@
-# DCoPN
+# Distributted Petri Nets
 
-<!-- TODO: One Paragraph of project description goes here -->
+Distributed Petri nets consists of an implementation of Petri nets in which arcs may cross the boundaries of a node --that is, places and transitions of the net may reside in different nodes.
+The objective of this implementation is to use the Petri nets formalism to analize ad hoc systems, and prove distribution properties (e.g., deadlocks, liveliness, reachabillity) about them.
+
 
 ## Getting Started
+
+## Go
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
@@ -25,6 +29,9 @@ DCoPN [-ctx contextName] [-p port] [-h host] [-cdr contextDependencyRelationsJso
 ```
 <!-- TODO: Describe what each parameter is and how the contextDependencyRelationsJson works -->
 
-## Running the tests
+### Running the tests
 
 All tests can be run using `go test ./...`
+
+
+## Elixir
