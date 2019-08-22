@@ -11,7 +11,6 @@ type Transition struct {
 	Priority int
 	inArcs []arc
 	outArcs []arc
-	inhibitorArcs []arc
 }
 
 func (t Transition) String() string {
@@ -64,6 +63,3 @@ func (t *Transition) addOutArc(_arc arc) {
 	t.outArcs = append(t.outArcs, _arc)
 }
 
-func (t *Transition) addInhibitorArc(_arc arc) {
-	t.inhibitorArcs = append(t.inhibitorArcs, _arc)
-}
