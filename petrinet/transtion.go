@@ -8,9 +8,10 @@ import (
 // Transition of a PetriNet
 type Transition struct {
 	ID int
-	Priority int
+	priority int
 	inArcs []arc
 	outArcs []arc
+	remoteOutArcs [] RemoteArc
 }
 
 func (t Transition) String() string {
@@ -26,8 +27,8 @@ func (t Transition) String() string {
 		return ans
 	}
 	return fmt.Sprintf(
-		"{ID: %v, priority: %v, inArcs: %v, outArcs: %v, inhibitorArcs: %v}",
-		t.ID, t.Priority, arcListString(t.inArcs), arcListString(t.outArcs), arcListString(t.inhibitorArcs))
+		"{ID: %v, priority: %v, inArcs: %v, outArcs: %v}",
+		t.ID, t.priority, arcListString(t.inArcs), arcListString(t.outArcs))
 }
 
 
@@ -36,8 +37,8 @@ func (t *Transition) canFire() bool {
   for _, currArc := range t.inArcs {
 		ans = ans && currArc.place.marks >= currArc.weight
   }
-  for _, value := range t.inhibitorArcs {
-    ans = ans && value.place.marks < value.weight
+  for _, remArc := range t.remoteOutArcs {
+		ans = ans && remArc.canFire()
   }
   return ans
 }
@@ -52,6 +53,9 @@ func (t *Transition) fire() error {
   for _, currArc := range t.outArcs {
     currArc.place.marks += currArc.weight
   }
+  for _, remArc := range t.remoteOutArcs {
+    remArc.fire()
+  }
 	return nil
 }
 
@@ -63,3 +67,6 @@ func (t *Transition) addOutArc(_arc arc) {
 	t.outArcs = append(t.outArcs, _arc)
 }
 
+func (t *Transition) addRemoteOutArc(_rarc RemoteArc) {
+	t.remoteOutArcs = append(t.remoteOutArcs, _rarc)
+}

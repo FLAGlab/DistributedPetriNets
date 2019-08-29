@@ -5,11 +5,22 @@ import (
 )
 
 type RemoteArc struct {
- 	PlaceID int
-	Address string
-	Weight int
+ 	placeID int
+	address string
+	weight int
+	marks int
 }
 
 func (a RemoteArc) String() string {
-	//return fmt.Sprintf("{placeID: %v, address: %v, context: %v, weight: %v, marks: %v}", a.PlaceID, a.Address, a.Context, a.Weight, a.Marks)
+	return fmt.Sprintf("{placeID: %v, address: %v, weight: %v, marks: %v}", a.placeID, a.address, a.weight, a.marks)
+}
+
+//@TODO
+func (t *RemoteArc) canFire() bool {
+	return true
+}
+
+//@TODO
+func (t *RemoteArc) fire() {
+	
 }
