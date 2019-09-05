@@ -1,14 +1,14 @@
 package petrinet
 
 import (
-  "fmt"
+	"fmt"
 )
 
 type RemoteArc struct {
- 	placeID int
+	placeID int
 	address string
-	weight int
-	marks int
+	weight  int
+	marks   int
 }
 
 func (a RemoteArc) String() string {
@@ -22,5 +22,5 @@ func (t *RemoteArc) canFire() bool {
 
 //@TODO
 func (t *RemoteArc) fire() {
-	
+
 }

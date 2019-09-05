@@ -1,17 +1,17 @@
 package petrinet
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 // Transition of a PetriNet
 type Transition struct {
-	ID int
-	priority int
-	inArcs []arc
-	outArcs []arc
-	remoteOutArcs [] RemoteArc
+	ID            int
+	priority      int
+	inArcs        []arc
+	outArcs       []arc
+	remoteOutArcs []RemoteArc
 }
 
 func (t Transition) String() string {
@@ -31,16 +31,15 @@ func (t Transition) String() string {
 		t.ID, t.priority, arcListString(t.inArcs), arcListString(t.outArcs))
 }
 
-
 func (t *Transition) canFire() bool {
 	ans := true
-  for _, currArc := range t.inArcs {
+	for _, currArc := range t.inArcs {
 		ans = ans && currArc.place.marks >= currArc.weight
-  }
-  for _, remArc := range t.remoteOutArcs {
+	}
+	for _, remArc := range t.remoteOutArcs {
 		ans = ans && remArc.canFire()
-  }
-  return ans
+	}
+	return ans
 }
 
 func (t *Transition) fire() error {
@@ -48,14 +47,14 @@ func (t *Transition) fire() error {
 		return errors.New("Trying to fire transition that can't be fired")
 	}
 	for _, currArc := range t.inArcs {
-    currArc.place.marks -= currArc.weight
-  }
-  for _, currArc := range t.outArcs {
-    currArc.place.marks += currArc.weight
-  }
-  for _, remArc := range t.remoteOutArcs {
-    remArc.fire()
-  }
+		currArc.place.marks -= currArc.weight
+	}
+	for _, currArc := range t.outArcs {
+		currArc.place.marks += currArc.weight
+	}
+	for _, remArc := range t.remoteOutArcs {
+		remArc.fire()
+	}
 	return nil
 }
 
