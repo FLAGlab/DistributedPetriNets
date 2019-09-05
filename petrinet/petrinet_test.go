@@ -1,7 +1,6 @@
 package petrinet
 
 import (
-	//"reflect"
 	"testing"
 )
 
