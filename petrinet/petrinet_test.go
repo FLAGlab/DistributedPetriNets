@@ -24,3 +24,23 @@ func TestAddPlace(t *testing.T) {
 		t.Errorf("Marks of place %v should be 2", p2)
 	}
 }
+
+func TestFireLocalTransition(t *testing.T) {
+	pn := Init(1)
+	pn.AddPlace(1, 2, "p1")
+	pn.AddPlace(2, 1, "p2")
+	pn.AddTransition(1, 1)
+	pn.AddInArc(1, 1, 1)
+	pn.AddOutArc(1, 2, 1)
+	pn.FireTransitionByID(1)
+	expected := make(map[int]int)
+	expected[1] = 1
+	expected[2] = 2
+	for key, value := range expected {
+		if pn.places[key].marks != value {
+			t.Errorf(
+				"Place %v should have been affected by transition %v, expected it to have %v marks but had %v",
+				pn.places[key], pn.transitions[1], value, pn.places[key].marks)
+		}
+	}
+}
