@@ -25,6 +25,24 @@ func TestAddPlace(t *testing.T) {
 	}
 }
 
+func TestCurrentState(t *testing.T) {
+	pn := Init(1)
+	pn.AddPlace(1, 0, "p1")
+	pn.AddPlace(2, 1, "p2")
+	pn.AddPlace(3, 3, "p3")
+	_, resMap := pn.getCurrentState()
+	expected := make(map[int]int)
+	expected[1] = 0
+	expected[2] = 1
+	expected[3] = 3
+	for key, value := range expected {
+		if resMap[key] != value {
+			t.Errorf("The Place %v has an incorrect marking, should be %v but is %v", 
+			key, value, resMap[key])
+		}
+	}
+}
+
 func TestFireLocalTransition(t *testing.T) {
 	pn := Init(1)
 	pn.AddPlace(1, 2, "p1")
