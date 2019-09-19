@@ -8,7 +8,7 @@ import (
 
 	"github.com/FLAGlab/DCoPN/petrinet"
 	"github.com/FLAGlab/DCoPN/petribuilder"
-	"github.com/FLAGlab/DCoPN/conflictsolver"
+	//"github.com/FLAGlab/DCoPN/conflictsolver"
 )
 
 type LeaderStep int
