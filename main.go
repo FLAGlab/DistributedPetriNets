@@ -1,11 +1,17 @@
 package main
 
 import (
-  "fmt"
-  "github.com/FLAGlab/DCoPN/communication"
+	"fmt"
+
+	comm "github.com/FLAGlab/DistributedPetriNets/communication"
 )
 
 func main() {
-  fmt.Println("Starting....")
-  communication.Run()
+	fmt.Println("init....")
+	serv := &comm.ServiceNode{
+		ServiceName: "echo",
+	}
+	go serv.RunService()
+	for {
+	}
 }
