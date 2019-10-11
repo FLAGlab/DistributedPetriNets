@@ -1,4 +1,4 @@
-package communication
+package petrinet
 
 import (
 	"fmt"
@@ -9,22 +9,26 @@ import (
 )
 
 //@TODO write a suitble handler
-type echoHandler struct{}
+type echoHandler struct {
+	place *Place
+}
 
 func (h *echoHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, _ := ioutil.ReadAll(req.Body)
 	fmt.Println("Message")
-	fmt.Printf("%v\n", body)
-	res.Write(body)
+	fmt.Printf("%v, %v\n", body, h.place.GetMarks())
+	fmt.Fprintf(res, "%v", h.place.GetMarks())
+
 }
 
 type ServiceNode struct {
+	PetriPlace  *Place
 	ServiceName string
 }
 
 func (sn *ServiceNode) RunService() {
 
-	handler := new(echoHandler)
+	handler := &echoHandler{place: sn.PetriPlace}
 
 	config := &sleuth.Config{
 		Handler: handler,

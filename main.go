@@ -3,15 +3,17 @@ package main
 import (
 	"fmt"
 
-	comm "github.com/FLAGlab/DistributedPetriNets/communication"
+	pn "github.com/FLAGlab/DistributedPetriNets/petrinet"
 )
 
 func main() {
 	fmt.Println("init....")
-	serv := &comm.ServiceNode{
-		ServiceName: "echo",
+	pla := &pn.Place{
+		ID:    1,
+		Marks: 2,
+		Label: "este",
 	}
-	go serv.RunService()
+	go pla.InitService()
 	for {
 	}
 }
