@@ -33,8 +33,9 @@ func (sn *ServiceNode) RunService() {
 	config := &sleuth.Config{
 		Handler: handler,
 		// this interface is for test purposes only
-		Interface: "wlp1s0",
+		//Interface: "wlp1s0",
 		LogLevel:  "debug",
+		Port: 6000,
 		Service:   sn.ServiceName,
 	}
 	server, err := sleuth.New(config)
