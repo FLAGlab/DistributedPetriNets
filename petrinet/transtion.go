@@ -34,7 +34,7 @@ func (t Transition) String() string {
 func (t *Transition) canFire() bool {
 	ans := true
 	for _, currArc := range t.inArcs {
-		ans = ans && currArc.place.marks >= currArc.weight
+		ans = ans && currArc.place.Marks >= currArc.weight
 	}
 	for _, remArc := range t.remoteOutArcs {
 		ans = ans && remArc.canFire()
@@ -47,10 +47,10 @@ func (t *Transition) fire() error {
 		return errors.New("Trying to fire transition that can't be fired")
 	}
 	for _, currArc := range t.inArcs {
-		currArc.place.marks -= currArc.weight
+		currArc.place.Marks -= currArc.weight
 	}
 	for _, currArc := range t.outArcs {
-		currArc.place.marks += currArc.weight
+		currArc.place.Marks += currArc.weight
 	}
 	for _, remArc := range t.remoteOutArcs {
 		remArc.fire()
