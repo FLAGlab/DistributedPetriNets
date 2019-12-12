@@ -1,4 +1,4 @@
-# Distributted Petri Nets
+# Distributed Petri Nets
 
 Distributed Petri nets consists of an implementation of Petri nets in which arcs may cross the boundaries of a node --that is, places and transitions of the net may reside in different nodes.
 The objective of this implementation is to use the Petri nets formalism to analize ad hoc systems, and prove distribution properties (e.g., deadlocks, liveliness, reachabillity) about them.
@@ -16,18 +16,9 @@ You will need to have Go on your machine. To get started with Go [click here](ht
 
 ### Installing and running
 
-Clone or download the repo into `%GOPATH%/src/github.com/FLAGlab/DCoPN`.
+The code is contained in a docker container
 
-Now build using
-
-```
-go build
-```
-That should create an executable named `DCoPN`. Now you can run it using
-```
-DCoPN [-ctx contextName] [-p port] [-h host] [-cdr contextDependencyRelationsJsonPath] [-l leader] [peerAddress]
-```
-<!-- TODO: Describe what each parameter is and how the contextDependencyRelationsJson works -->
+<TODO>
 
 ### Running the tests
 
