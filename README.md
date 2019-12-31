@@ -18,7 +18,8 @@ You will need to have Go on your machine. To get started with Go [click here](ht
 
 The code is contained in a docker container
 
-<TODO>
+`docker build -t dpn .`
+`docker run -i -t --network host dpn`
 
 ### Running the tests
 
