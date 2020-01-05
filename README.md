@@ -19,7 +19,10 @@ You will need to have Go on your machine. To get started with Go [click here](ht
 The code is contained in a docker container
 
 `docker build -t dpn .`
+
 `docker run -i -t --network host dpn`
+
+You can run the code by going to the `go/src/github.com/FLAGlab/DistributedPetriNets` and then running the main using the command `go run main.go`
 
 ### Running the tests
 
