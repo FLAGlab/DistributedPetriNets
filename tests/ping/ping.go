@@ -23,5 +23,5 @@ func pingMain() {
 		OutArcs:  make([]pn.Arc, 0),
 	}
 	tping.AddInArc(arc)
-	go pla.InitService()
+	go pla.InitService("ping")
 }

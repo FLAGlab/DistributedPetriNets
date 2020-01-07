@@ -21,24 +21,42 @@ func (h *echoHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 }
 
+//ServiceNode structure of a node associated to its place
 type ServiceNode struct {
 	PetriPlace  *Place
 	ServiceName string
 }
 
+//RunService executes the node's server and client
 func (sn *ServiceNode) RunService() {
+	server(sn)
+	client(sn)
+}
 
+func client(sn *ServiceNode) {
+	if sn.ServiceName == "ping" {
+
+	}
+}
+
+func server(sn *ServiceNode) {
 	handler := &echoHandler{place: sn.PetriPlace}
 
 	config := &sleuth.Config{
 		Handler: handler,
 		// this interface is for test purposes only
 		//Interface: "wlp1s0",
-		LogLevel:  "debug",
-		Port: 6000,
-		Service:   sn.ServiceName,
+		LogLevel: "debug",
+		Port:     6000,
+		Service:  sn.ServiceName,
 	}
 	server, err := sleuth.New(config)
+
+	if config.Service == "ping" {
+
+	} else if config.Service == "pong" {
+
+	}
 	if err != nil {
 		panic(err.Error())
 	}

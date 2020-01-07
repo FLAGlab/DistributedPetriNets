@@ -2,7 +2,6 @@ package petrinet
 
 import (
 	"fmt"
-	"strconv"
 )
 
 // Place of the Petri net
@@ -22,10 +21,10 @@ func (p *Place) GetMarks() int {
 }
 
 //InitService creates and runs the node containing the net
-func (p *Place) InitService() {
+func (p *Place) InitService(_serviceName string) {
 	srv := &ServiceNode{
 		PetriPlace:  p,
-		ServiceName: strconv.Itoa(p.ID),
+		ServiceName: _serviceName, //strconv.Itoa(p.ID),
 	}
 	srv.RunService()
 }
