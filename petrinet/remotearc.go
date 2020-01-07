@@ -4,23 +4,24 @@ import (
 	"fmt"
 )
 
+// RemoteArc for arcs crossing nodes
 type RemoteArc struct {
-	placeID int
-	address string
-	weight  int
-	marks   int
+	PlaceID int
+	Address string
+	Weight  int
+	Marks   int
 }
 
-func (a RemoteArc) String() string {
+func (rt RemoteArc) String() string {
 	return fmt.Sprintf("{placeID: %v, address: %v, weight: %v, marks: %v}", a.placeID, a.address, a.weight, a.marks)
 }
 
 //@TODO
-func (t *RemoteArc) canFire() bool {
+func (rt *RemoteArc) canFire() bool {
 	return true
 }
 
 //@TODO
-func (t *RemoteArc) fire() {
+func (rt *RemoteArc) fire() {
 
 }

@@ -1,14 +1,15 @@
 package petrinet
 
 import (
-  "fmt"
+	"fmt"
 )
 
-type arc struct {
-	place *Place
-	weight int
+// Arc between Petri net components
+type Arc struct {
+	Place  *Place
+	Weight int
 }
 
-func (a arc) String() string {
+func (a Arc) String() string {
 	return fmt.Sprintf("{place: %v, weight: %v}", a.place, a.weight)
 }

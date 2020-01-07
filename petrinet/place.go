@@ -5,21 +5,23 @@ import (
 	"strconv"
 )
 
+// Place of the Petri net
 type Place struct {
 	ID    int
 	Marks int
 	Label string
 }
 
-func (a Place) String() string {
-	return fmt.Sprintf("{id: %v, marks: %v, label: %v}", a.ID, a.Marks, a.Label)
+func (p Place) String() string {
+	return fmt.Sprintf("{id: %v, marks: %v, label: %v}", p.ID, p.Marks, p.Label)
 }
 
 // GetMarks gets the marks on the place
-func (a *Place) GetMarks() int {
-	return a.Marks
+func (p *Place) GetMarks() int {
+	return p.Marks
 }
 
+//InitService creates and runs the node containing the net
 func (p *Place) InitService() {
 	srv := &ServiceNode{
 		PetriPlace:  p,

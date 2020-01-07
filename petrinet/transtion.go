@@ -8,14 +8,14 @@ import (
 // Transition of a PetriNet
 type Transition struct {
 	ID            int
-	priority      int
-	inArcs        []arc
-	outArcs       []arc
-	remoteOutArcs []RemoteArc
+	Priority      int
+	InArcs        []Arc
+	OutArcs       []Arc
+	RemoteOutArcs []RemoteArc
 }
 
 func (t Transition) String() string {
-	arcListString := func(list []arc) string {
+	arcListString := func(list []Arc) string {
 		ans := "["
 		for _, item := range list {
 			if ans != "[" {
@@ -28,44 +28,49 @@ func (t Transition) String() string {
 	}
 	return fmt.Sprintf(
 		"{ID: %v, priority: %v, inArcs: %v, outArcs: %v}",
-		t.ID, t.priority, arcListString(t.inArcs), arcListString(t.outArcs))
+		t.ID, t.Priority, arcListString(t.InArcs), arcListString(t.OutArcs))
 }
 
-func (t *Transition) canFire() bool {
+//CanFire checks if the transition can fire
+func (t *Transition) CanFire() bool {
 	ans := true
-	for _, currArc := range t.inArcs {
-		ans = ans && currArc.place.Marks >= currArc.weight
+	for _, currArc := range t.InArcs {
+		ans = ans && currArc.Place.Marks >= currArc.Weight
 	}
-	for _, remArc := range t.remoteOutArcs {
+	for _, remArc := range t.RemoteOutArcs {
 		ans = ans && remArc.canFire()
 	}
 	return ans
 }
 
-func (t *Transition) fire() error {
-	if !t.canFire() {
+//Fire fires the transition
+func (t *Transition) Fire() error {
+	if !t.CanFire() {
 		return errors.New("Trying to fire transition that can't be fired")
 	}
-	for _, currArc := range t.inArcs {
-		currArc.place.Marks -= currArc.weight
+	for _, currArc := range t.InArcs {
+		currArc.Place.Marks -= currArc.Weight
 	}
-	for _, currArc := range t.outArcs {
-		currArc.place.Marks += currArc.weight
+	for _, currArc := range t.OutArcs {
+		currArc.Place.Marks += currArc.Weight
 	}
-	for _, remArc := range t.remoteOutArcs {
+	for _, remArc := range t.RemoteOutArcs {
 		remArc.fire()
 	}
 	return nil
 }
 
-func (t *Transition) addInArc(_arc arc) {
-	t.inArcs = append(t.inArcs, _arc)
+//AddInArc adds an arc to \cdot t
+func (t *Transition) AddInArc(_arc Arc) {
+	t.InArcs = append(t.InArcs, _arc)
 }
 
-func (t *Transition) addOutArc(_arc arc) {
-	t.outArcs = append(t.outArcs, _arc)
+//AddOutArc internode arcs
+func (t *Transition) AddOutArc(_arc Arc) {
+	t.OutArcs = append(t.OutArcs, _arc)
 }
 
-func (t *Transition) addRemoteOutArc(_rarc RemoteArc) {
-	t.remoteOutArcs = append(t.remoteOutArcs, _rarc)
+//AddRemoteOutArc arcs crossing nodes, alwasys from transition to place
+func (t *Transition) AddRemoteOutArc(_rarc RemoteArc) {
+	t.RemoteOutArcs = append(t.RemoteOutArcs, _rarc)
 }
