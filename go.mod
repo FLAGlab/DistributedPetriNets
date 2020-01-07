@@ -1,4 +1,4 @@
-module github.com/FLAGlab/DCoPN
+module github.com/FLAGlab/DistributedPetriNets
 
 require (
 	github.com/armen/goviral v0.0.0-20150416020909-5ca05b524b2b // indirect
