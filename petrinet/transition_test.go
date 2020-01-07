@@ -12,10 +12,10 @@ func initTestTransition() *Transition {
 func TestAddInArc(t *testing.T) {
 	tr := initTestTransition()
 	p := Place{1, 1, ""}
-	newArc := arc{&p, 1}
-	tr.addInArc(newArc)
+	newArc := Arc{&p, 1}
+	tr.AddInArc(newArc)
 	exists := false
-	for _, item := range tr.inArcs {
+	for _, item := range tr.InArcs {
 		exists = exists || reflect.DeepEqual(newArc, item)
 	}
 	if !exists {
@@ -26,10 +26,10 @@ func TestAddInArc(t *testing.T) {
 func TestAddOutArc(t *testing.T) {
 	tr := initTestTransition()
 	p := Place{1, 1, ""}
-	newArc := arc{&p, 1}
-	tr.addOutArc(newArc)
+	newArc := Arc{&p, 1}
+	tr.AddOutArc(newArc)
 	exists := false
-	for _, item := range tr.outArcs {
+	for _, item := range tr.OutArcs {
 		exists = exists || reflect.DeepEqual(newArc, item)
 	}
 	if !exists {
@@ -40,9 +40,9 @@ func TestAddOutArc(t *testing.T) {
 func TestAddOutRemoteArc(t *testing.T) {
 	tr := initTestTransition()
 	newrarc := RemoteArc{1, "127.0.0.1", 1, 1}
-	tr.addRemoteOutArc(newrarc)
+	tr.AddRemoteOutArc(newrarc)
 	exists := false
-	for _, item := range tr.remoteOutArcs {
+	for _, item := range tr.RemoteOutArcs {
 		exists = exists || reflect.DeepEqual(newrarc, item)
 	}
 	if !exists {

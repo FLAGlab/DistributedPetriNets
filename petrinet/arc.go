@@ -11,5 +11,5 @@ type Arc struct {
 }
 
 func (a Arc) String() string {
-	return fmt.Sprintf("{place: %v, weight: %v}", a.place, a.weight)
+	return fmt.Sprintf("{place: %v, weight: %v}", a.Place, a.Weight)
 }
