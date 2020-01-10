@@ -84,5 +84,6 @@ func (t *Transition) AddOutArc(_arc Arc) {
 
 //AddRemoteOutArc arcs crossing nodes, alwasys from transition to place
 func (t *Transition) AddRemoteOutArc(_rarc RemoteArc) {
+	_rarc.Init()
 	t.RemoteOutArcs = append(t.RemoteOutArcs, _rarc)
 }
