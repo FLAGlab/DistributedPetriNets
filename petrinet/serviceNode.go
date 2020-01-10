@@ -13,6 +13,10 @@ type petriHandler struct {
 	place *Place
 }
 
+fun (ph *petriHandler) Init(p *Place) {
+	ph.place := p
+}
+
 func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, _ := ioutil.ReadAll(req.Body)
 	fmt.Println("Addign Token")
@@ -34,14 +38,15 @@ func (sn *ServiceNode) RunService() {
 }
 
 func server(sn *ServiceNode) {
-	handler := &petriHandler{place: sn.PetriPlace}
+	handler := new(petriHandler)
+	handler.Init(sn.PetriPlace)
 
 	config := &sleuth.Config{
 		Handler: handler,
 		// this interface is for test purposes only
-		//Interface: "wlp1s0",
+		Interface: "wlp1s0",
 		LogLevel: "debug",
-		Port:     6000,
+		//Port:     6000,
 		Service:  sn.ServiceName,
 	}
 	server, err := sleuth.New(config)
