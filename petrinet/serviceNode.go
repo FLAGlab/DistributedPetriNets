@@ -14,7 +14,7 @@ type petriHandler struct {
 }
 
 func (ph *petriHandler) Init(p *Place) {
-	ph.place := p
+	ph.place = p
 }
 
 func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
