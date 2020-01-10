@@ -33,10 +33,12 @@ func (rt *RemoteArc) fire() {
 	}
 	defer client.Close()
 	client.WaitFor(rt.ServiceName)
-	input := "1"
+	input := "This is the value I am inputting."
 	body := bytes.NewBuffer([]byte(input))
+	fmt.Println("Hey Hey llegue aca")
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
 	response, err := client.Do(request)
+	fmt.Println("Hey si pude")
 	if err != nil {
 		panic(err.Error())
 	}
