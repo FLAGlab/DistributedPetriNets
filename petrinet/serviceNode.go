@@ -9,14 +9,15 @@ import (
 )
 
 //@TODO write a suitble handler
-type echoHandler struct {
+type petriHandler struct {
 	place *Place
 }
 
-func (h *echoHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, _ := ioutil.ReadAll(req.Body)
-	fmt.Println("Message")
+	fmt.Println("Addign Token")
 	fmt.Printf("%v, %v\n", body, h.place.GetMarks())
+	h.place.Marks++
 	fmt.Fprintf(res, "%v", h.place.GetMarks())
 
 }
@@ -30,17 +31,10 @@ type ServiceNode struct {
 //RunService executes the node's server and client
 func (sn *ServiceNode) RunService() {
 	server(sn)
-	client(sn)
-}
-
-func client(sn *ServiceNode) {
-	if sn.ServiceName == "ping" {
-
-	}
 }
 
 func server(sn *ServiceNode) {
-	handler := &echoHandler{place: sn.PetriPlace}
+	handler := &petriHandler{place: sn.PetriPlace}
 
 	config := &sleuth.Config{
 		Handler: handler,
@@ -52,11 +46,6 @@ func server(sn *ServiceNode) {
 	}
 	server, err := sleuth.New(config)
 
-	if config.Service == "ping" {
-
-	} else if config.Service == "pong" {
-
-	}
 	if err != nil {
 		panic(err.Error())
 	}

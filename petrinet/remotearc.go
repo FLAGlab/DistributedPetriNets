@@ -21,5 +21,24 @@ func (rt *RemoteArc) canFire() bool {
 
 //@TODO
 func (rt *RemoteArc) fire() {
-
+	config := &sleuth.Config{LogLevel: "debug"}
+	client, err := sleuth.New(config)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer client.Close()
+	client.WaitFor(service)
+	input := "1"
+	body := bytes.NewBuffer([]byte(input))
+	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
+	response, err := client.Do(request)
+	if err != nil {
+		panic(err.Error())
+	}
+	output, _ := ioutil.ReadAll(response.Body)
+	if string(output) == input {
+		fmt.Println("It works.")
+	} else {
+		fmt.Println("It doesn't work.")
+	}
 }

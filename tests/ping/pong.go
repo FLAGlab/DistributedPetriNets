@@ -1,10 +1,10 @@
-package ping
+package main
 
 import (
 	pn "github.com/FLAGlab/DistributedPetriNets/petrinet"
 )
 
-func pongMain() {
+func main() {
 	fmt.Println("init Pong net....")
 	p := pn.InitPN(0)
 	p.AddTransition(1, 1)
