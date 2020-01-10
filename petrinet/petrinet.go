@@ -110,7 +110,6 @@ func (pn *PetriNet) Run() {
 		for _, t := range pn.Transitions {
 			t.Fire()
 		}
-		//fmt.Printf("%v \n", pn)
 	}
 }
 

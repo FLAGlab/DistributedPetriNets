@@ -19,7 +19,7 @@ func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	fmt.Printf("%v, %v\n", body, h.place.GetMarks())
 	h.place.Marks++
 	fmt.Fprintf(res, "%v", h.place.GetMarks())
-
+	res.Write(body)
 }
 
 //ServiceNode structure of a node associated to its place
