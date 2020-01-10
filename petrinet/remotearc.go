@@ -1,7 +1,12 @@
 package petrinet
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/ursiform/sleuth"
 )
 
 // RemoteArc for arcs crossing nodes
