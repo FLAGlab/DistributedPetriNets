@@ -106,8 +106,11 @@ func (pn *PetriNet) saveHistory() {
 }
 
 func (pn *PetriNet) Run() {
-	for _, t := range pn.Transitions {
-		t.Fire()
+	for {
+		for _, t := range pn.Transitions {
+			t.Fire()
+		}
+		fmt.Printf("%v \n", pn)
 	}
 }
 

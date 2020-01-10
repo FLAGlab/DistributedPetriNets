@@ -12,5 +12,5 @@ func main() {
 	p.AddInArc(1, 1, 1)
 	p.AddRemoteOutArc(1, 1, "ping")
 	p.InitService()
-	for {}
+	p.Run()
 }
