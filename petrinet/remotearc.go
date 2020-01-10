@@ -25,7 +25,7 @@ func (rt *RemoteArc) canFire() bool {
 }
 
 //@TODO
-func (rt *RemoteArc) fire() {
+func (rt *RemoteArc) fire() bool {
 	config := &sleuth.Config{LogLevel: "debug"}
 	client, err := sleuth.New(config)
 	if err != nil {
