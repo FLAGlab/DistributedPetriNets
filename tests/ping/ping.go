@@ -3,11 +3,6 @@ package main
 import (
 	"fmt"
 	pn "github.com/FLAGlab/DistributedPetriNets/petrinet"
-	"bytes"
-	"io/ioutil"
-	"net/http"
-
-	"github.com/ursiform/sleuth"
 )
 
 func main() {

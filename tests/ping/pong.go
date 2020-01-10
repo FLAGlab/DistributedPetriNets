@@ -2,12 +2,7 @@ package main
 
 import (
 	pn "github.com/FLAGlab/DistributedPetriNets/petrinet"
-	"bytes"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
-	"github.com/ursiform/sleuth"
 )
 
 func main() {
