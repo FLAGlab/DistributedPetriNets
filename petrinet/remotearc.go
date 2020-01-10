@@ -13,7 +13,18 @@ import (
 type RemoteArc struct {
 	ServiceName string
 	Weight  int
+	Client sleuth.Client
 }
+
+func (rt *RemoteArc) Init() {
+	config := &sleuth.Config{LogLevel: "debug"}
+	client, err := sleuth.New(config)
+	if err != nil {
+		panic(err.Error())
+	}
+	//defer client.Close()
+}
+
 
 func (rt RemoteArc) String() string {
 	return fmt.Sprintf("{arc to service: %v, weight: %v}", rt.ServiceName, rt.Weight)
@@ -26,18 +37,12 @@ func (rt *RemoteArc) canFire() bool {
 
 //@TODO
 func (rt *RemoteArc) fire() bool {
-	config := &sleuth.Config{LogLevel: "debug"}
-	client, err := sleuth.New(config)
-	if err != nil {
-		panic(err.Error())
-	}
-	defer client.Close()
-	client.WaitFor(rt.ServiceName)
+	rt.Client.WaitFor(rt.ServiceName)
 	input := "This is the value I am inputting."
 	body := bytes.NewBuffer([]byte(input))
 	fmt.Println("Hey Hey llegue aca")
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
-	response, err := client.Do(request)
+	response, err := rt.Client.Do(request)
 	fmt.Println("Hey si pude")
 	if err != nil {
 		//panic(err.Error())
