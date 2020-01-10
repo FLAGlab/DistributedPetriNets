@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"time"
 )
 
 // OperationType operation being executed on a place
@@ -192,6 +193,7 @@ func (pn *PetriNet) InitService() {
 	for i := range pn.Places {
 		go pn.Places[i].InitService(pn.Places[i].Label)
 	}
+	time.Sleep(2 * time.Second)
 	pn.Run()
 }
 
