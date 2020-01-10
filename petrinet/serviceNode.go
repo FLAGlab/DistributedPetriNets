@@ -45,7 +45,7 @@ func server(sn *ServiceNode) {
 		Handler: handler,
 		// this interface is for test purposes only
 		//Interface: "wlp1s0",
-		LogLevel: "debug",
+		//LogLevel: "debug",
 		//Port:     6000,
 		Service:  sn.ServiceName,
 	}
