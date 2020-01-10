@@ -180,8 +180,8 @@ func (pn *PetriNet) AddRemoteOutArc(_transition, weight int, serviceName string)
 }
 
 //InitService
-func InitService() {
-	for p := range Places {
+func (pn *PetriNet) InitService() {
+	for p := range pn.Places {
 		go p.InitService(p.label)
 	}
 }
