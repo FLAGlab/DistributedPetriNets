@@ -48,7 +48,7 @@ func (t *Transition) CanFire() bool {
 //Fire fires the transition
 func (t *Transition) Fire() error {
 	if !t.CanFire() {
-		//return errors.New("Trying to fire transition that can't be fired")
+		return errors.New("Trying to fire transition that can't be fired")
 	}
 	for _, currArc := range t.InArcs {
 		fmt.Printf("Fire 1 = %v \n", currArc.Place.Marks)
