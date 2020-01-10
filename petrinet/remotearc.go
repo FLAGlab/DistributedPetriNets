@@ -18,7 +18,8 @@ type RemoteArc struct {
 
 func (rt *RemoteArc) Init() {
 	config := &sleuth.Config{LogLevel: "debug"}
-	rt.Client, err := sleuth.New(config)
+	err := nil
+	rt.Client, err = sleuth.New(config)
 	if err != nil {
 		panic(err.Error())
 	}
