@@ -13,7 +13,7 @@ type petriHandler struct {
 	place *Place
 }
 
-fun (ph *petriHandler) Init(p *Place) {
+func (ph *petriHandler) Init(p *Place) {
 	ph.place := p
 }
 
