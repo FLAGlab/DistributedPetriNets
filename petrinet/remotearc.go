@@ -13,13 +13,13 @@ import (
 type RemoteArc struct {
 	ServiceName string
 	Weight  int
-	Client sleuth.Client
+	Client *sleuth.Client
 }
 
 func (rt *RemoteArc) Init() {
 	config := &sleuth.Config{LogLevel: "debug"}
-	err := nil
-	rt.Client, err = sleuth.New(config)
+	client, err := sleuth.New(config)
+	rt.Client = client
 	if err != nil {
 		panic(err.Error())
 	}
