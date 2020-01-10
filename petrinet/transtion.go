@@ -14,6 +14,8 @@ type Transition struct {
 	RemoteOutArcs []RemoteArc
 }
 
+
+
 func (t Transition) String() string {
 	arcListString := func(list []Arc) string {
 		ans := "["

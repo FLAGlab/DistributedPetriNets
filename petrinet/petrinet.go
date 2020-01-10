@@ -190,12 +190,20 @@ func (pn *PetriNet) AddOutArc(_transition, to, _weight int) {
 			Weight: _weight})
 }
 
-func (pn *PetriNet) addRemoteOutArc(_transition, to, weight int) {
+//AddRemoteOutArc adds a remote arc
+func (pn *PetriNet) AddRemoteOutArc(_transition, weight int, serviceName string) {
 	pn.Transitions[_transition].AddRemoteOutArc(
 		RemoteArc{
-			PlaceID: to,
+			ServiceName: serviceName,
 			Weight:  weight,
 		})
+}
+
+//InitService
+func InitService() {
+	for p := range places {
+		go p.InitService(p.label)
+	}
 }
 
 //InitPN Initializes a new Petri net

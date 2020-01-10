@@ -6,10 +6,8 @@ import (
 
 // RemoteArc for arcs crossing nodes
 type RemoteArc struct {
-	PlaceID int
-	Address string
+	ServiceName string
 	Weight  int
-	Marks   int
 }
 
 func (rt RemoteArc) String() string {
