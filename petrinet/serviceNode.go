@@ -50,5 +50,8 @@ func server(sn *ServiceNode) {
 		panic(err.Error())
 	}
 	defer server.Close()
-	http.ListenAndServe(":9000", handler)
+	if sn.ServiceName == "ping"
+		http.ListenAndServe(":8080", handler)
+	else
+		http.ListenAndServe(":8081", handler)
 }
