@@ -192,6 +192,7 @@ func (pn *PetriNet) InitService() {
 	for i := range pn.Places {
 		go pn.Places[i].InitService(pn.Places[i].Label)
 	}
+	pn.Run()
 }
 
 //InitPN Initializes a new Petri net
