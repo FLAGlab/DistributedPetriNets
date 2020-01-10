@@ -44,11 +44,11 @@ func (rt *RemoteArc) fire() bool {
 	fmt.Println("Hey Hey llegue aca")
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
 	response, err := rt.Client.Do(request)
-	fmt.Println("Hey si pude")
 	if err != nil {
 		//panic(err.Error())
 		return false
 	}
+	fmt.Println("Hey si pude")
 	output, _ := ioutil.ReadAll(response.Body)
 	if string(output) == input {
 		fmt.Println("It works.")
