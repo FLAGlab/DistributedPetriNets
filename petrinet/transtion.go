@@ -47,6 +47,7 @@ func (t *Transition) CanFire() bool {
 
 //Fire fires the transition
 func (t *Transition) Fire() error {
+	valor := false
 	if !t.CanFire() {
 		return errors.New("Trying to fire transition that can't be fired")
 	}
@@ -60,8 +61,13 @@ func (t *Transition) Fire() error {
 	}
 	for _, remArc := range t.RemoteOutArcs {
 		fmt.Printf("voy a disparar, remoto")
-		remArc.fire()
+		valor = valor || remArc.fire()
 		fmt.Printf("Disparo remoto, o no?")
+	}
+	if !valor {
+		for _, currArc := range t.InArcs {
+			currArc.Place.Marks += currArc.Weight
+		}
 	}
 	return nil
 }

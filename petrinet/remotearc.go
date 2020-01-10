@@ -40,7 +40,8 @@ func (rt *RemoteArc) fire() {
 	response, err := client.Do(request)
 	fmt.Println("Hey si pude")
 	if err != nil {
-		panic(err.Error())
+		//panic(err.Error())
+		return false
 	}
 	output, _ := ioutil.ReadAll(response.Body)
 	if string(output) == input {
@@ -48,4 +49,5 @@ func (rt *RemoteArc) fire() {
 	} else {
 		fmt.Println("It doesn't work.")
 	}
+	return true
 }
