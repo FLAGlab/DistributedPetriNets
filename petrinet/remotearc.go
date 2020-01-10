@@ -32,7 +32,7 @@ func (rt *RemoteArc) fire() {
 		panic(err.Error())
 	}
 	defer client.Close()
-	client.WaitFor(service)
+	client.WaitFor(rt.ServiceName)
 	input := "1"
 	body := bytes.NewBuffer([]byte(input))
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
