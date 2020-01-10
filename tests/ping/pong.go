@@ -6,7 +6,7 @@ import (
 
 func pongMain() {
 	fmt.Println("init Pong net....")
-	p := pn.InitPN(0, "PongPN")
+	p := pn.InitPN(0)
 	p.AddTransition(1, 1)
 	p.AddPlace(1, 0, "pong")
 	p.AddInArc(1, 1, 1)
