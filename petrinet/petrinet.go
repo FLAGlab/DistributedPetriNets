@@ -111,26 +111,6 @@ func (pn *PetriNet) FireTransitionByID(transitionID int) error {
 	return pn.Transitions[transitionID].Fire()
 }
 
-func (pn *PetriNet) copyPlaceMarksToRemoteArc(remoteArcs []*RemoteArc) {
-	for i, rmtArc := range remoteArcs {
-		remoteArcs[i].Marks = pn.Places[rmtArc.PlaceID].Marks
-	}
-}
-
-// AddMarksToPlaces adds weight (pos or neg) to specified places
-func (pn *PetriNet) addMarksToPlaces(opType OperationType, remoteArcs []*RemoteArc, saveHistory bool) {
-	if saveHistory {
-		pn.saveHistory()
-	}
-	for _, rmtArc := range remoteArcs {
-		toAdd := rmtArc.Weight
-		if opType == SUBSTRACTION {
-			toAdd = -toAdd
-		}
-		pn.Places[rmtArc.PlaceID].Marks += toAdd
-	}
-}
-
 func (pn *PetriNet) getTransitionOptionsByPriority(priority int) []*Transition {
 	priorityOptions := make([]*Transition, 0)
 	for _, transition := range pn.Transitions {

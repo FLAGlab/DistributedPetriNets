@@ -11,7 +11,7 @@ type RemoteArc struct {
 }
 
 func (rt RemoteArc) String() string {
-	return fmt.Sprintf("{placeID: %v, address: %v, weight: %v, marks: %v}", rt.PlaceID, rt.Address, rt.Weight, rt.Marks)
+	return fmt.Sprintf("{arc to service: %v, weight: %v}", rt.ServiceName, rt.Weight)
 }
 
 //@TODO
