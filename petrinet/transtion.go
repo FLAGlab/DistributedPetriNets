@@ -51,9 +51,9 @@ func (t *Transition) Fire() error {
 		return errors.New("Trying to fire transition that can't be fired")
 	}
 	for _, currArc := range t.InArcs {
-		fmt.Printf("Fire 1 = %v \n", currArc.Place.Marks)
+		//fmt.Printf("Fire 1 = %v \n", currArc.Place.Marks)
 		currArc.Place.Marks -= currArc.Weight
-		fmt.Printf("Fire 1!= %v \n", currArc.Place.Marks)
+		//fmt.Printf("Fire 1!= %v \n", currArc.Place.Marks)
 	}
 	/*
 	for _, currArc := range t.OutArcs {
@@ -61,9 +61,9 @@ func (t *Transition) Fire() error {
 	}
 	*/
 	for _, remArc := range t.RemoteOutArcs {
-		fmt.Printf("voy a disparar, remoto \n")
+		//fmt.Printf("voy a disparar, remoto \n")
 		remArc.fire()
-		fmt.Printf("Disparo remoto, o no? \n")
+		//fmt.Printf("Disparo remoto, o no? \n")
 	}
 	return nil
 }

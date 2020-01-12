@@ -1,14 +1,13 @@
 package petrinet
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/ursiform/sleuth"
 )
 
-//@TODO write a suitble handler
+//@TODO Update the handler to manage the requests
 type petriHandler struct {
 	place *Place
 }
@@ -19,10 +18,10 @@ func (ph *petriHandler) Init(p *Place) {
 
 func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, _ := ioutil.ReadAll(req.Body)
-	fmt.Println("Addign Token")
-	fmt.Printf("====Old Marks %v \n", h.place.GetMarks())
+	//fmt.Println("Addign Token")
+	//fmt.Printf("====Old Marks %v \n", h.place.GetMarks())
 	h.place.Marks++
-	fmt.Printf("====New marks %v \n", h.place.GetMarks())
+	//fmt.Printf("====New marks %v \n", h.place.GetMarks())
 	res.Write(body)
 }
 

@@ -28,21 +28,9 @@ eg.
 package petrinet
 
 import (
-	"errors"
 	"fmt"
-	"math"
 	"sort"
 	"time"
-)
-
-// OperationType operation being executed on a place
-type OperationType int
-
-const (
-	//ADDITION of tokens
-	ADDITION OperationType = 0
-	//SUBSTRACTION of tokens
-	SUBSTRACTION OperationType = 1
 )
 
 // PetriNet struct, has an id, transitions and places
@@ -67,85 +55,6 @@ func (pn PetriNet) String() string {
 		s = fmt.Sprintf("%v\n%v", s, pn.Places[k])
 	}
 	return s + "\n"
-}
-
-func (pn *PetriNet) getPlace(id int) *Place {
-	return pn.Places[id]
-}
-
-func (pn *PetriNet) updatePriority(transitionID, priority int) {
-	pn.MaxPriority = -1
-	pn.Transitions[transitionID].Priority = priority
-}
-
-func (pn *PetriNet) rollBack() error {
-	if len(pn.MarksHistory) > 0 {
-		currState := pn.MarksHistory[len(pn.MarksHistory)-1]
-		pn.MarksHistory = pn.MarksHistory[:len(pn.MarksHistory)-1]
-		for idPlace, mark := range currState {
-			pn.Places[idPlace].Marks = mark
-		}
-		return nil
-	}
-
-	return errors.New("Invalid initial state")
-}
-
-func (pn *PetriNet) getCurrentState() (bool, map[int]int) {
-	ans := make(map[int]int)
-	for id, place := range pn.Places {
-		ans[id] = place.Marks
-	}
-	return true, ans
-}
-
-func (pn *PetriNet) saveHistory() {
-	must, state := pn.getCurrentState()
-	if must {
-		pn.MarksHistory = append(pn.MarksHistory, state)
-	}
-}
-
-func (pn *PetriNet) Run() {
-	for {
-		for _, t := range pn.Transitions {
-			t.Fire()
-		}
-	}
-}
-
-// FireTransitionByID fires a transition given its ID
-func (pn *PetriNet) FireTransitionByID(transitionID int) error {
-	pn.saveHistory()
-	return pn.Transitions[transitionID].Fire()
-}
-
-func (pn *PetriNet) getTransitionOptionsByPriority(priority int) []*Transition {
-	priorityOptions := make([]*Transition, 0)
-	for _, transition := range pn.Transitions {
-		if transition.Priority == priority && transition.CanFire() {
-			priorityOptions = append(priorityOptions, transition)
-		}
-	}
-	return priorityOptions
-}
-
-// GetTransitionOptions gets all the transitions with min priority that can be
-// fired with a map from transition ID to RemoteTransition
-func (pn *PetriNet) getTransitionOptions() []*Transition {
-	var transitionOptions []*Transition
-	currMin := math.MaxInt64
-	for _, currTransition := range pn.Transitions {
-		if currTransition.CanFire() {
-			if currTransition.Priority < currMin {
-				currMin = currTransition.Priority
-				transitionOptions = []*Transition{currTransition}
-			} else if currTransition.Priority == currMin {
-				transitionOptions = append(transitionOptions, currTransition)
-			}
-		}
-	}
-	return transitionOptions
 }
 
 func (pn *PetriNet) AddPlace(_id, _marks int, _label string) {
@@ -188,13 +97,26 @@ func (pn *PetriNet) AddRemoteOutArc(_transition, weight int, serviceName string)
 		})
 }
 
+func (pn *PetriNet) run() {
+	for {
+		fmt.Printf("%v Start to fire transitions current pn = %v\n",time.Now() ,pn)
+		for _, t := range pn.Transitions {
+			t.Fire()
+		}
+		fmt.Printf("%v End to fire transitions current pn = %v\n", time.Now() ,pn)
+		time.Sleep(5 * time.Second)
+	}
+	
+}
+
+
 //InitService
 func (pn *PetriNet) InitService() {
 	for i := range pn.Places {
 		go pn.Places[i].InitService(pn.Places[i].Label)
 	}
 	time.Sleep(2 * time.Second)
-	pn.Run()
+	pn.run()
 }
 
 //InitPN Initializes a new Petri net
@@ -205,17 +127,6 @@ func InitPN(_id int) *PetriNet {
 		MaxPriority: -1,
 		Transitions: make(map[int]*Transition),
 	}
-}
-
-func (pn *PetriNet) getMaxPriority() int {
-	if pn.MaxPriority == -1 {
-		for _, tr := range pn.Transitions {
-			if pn.MaxPriority < tr.Priority {
-				pn.MaxPriority = tr.Priority
-			}
-		}
-	}
-	return pn.MaxPriority
 }
 
 /*

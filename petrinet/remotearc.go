@@ -36,24 +36,24 @@ func (rt *RemoteArc) canFire() bool {
 	return true
 }
 
-//@TODO
+//@TODO update fire to hanlde time outs
 func (rt *RemoteArc) fire() bool {
 	rt.Client.WaitFor(rt.ServiceName)
 	input := "This is the value I am inputting."
 	body := bytes.NewBuffer([]byte(input))
-	fmt.Println("Hey Hey llegue aca")
+	//fmt.Println("Hey Hey llegue aca")
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
 	response, err := rt.Client.Do(request)
 	if err != nil {
 		//panic(err.Error())
 		return false
 	}
-	fmt.Println("Hey si pude")
+	//fmt.Println("Hey si pude")
 	output, _ := ioutil.ReadAll(response.Body)
 	if string(output) == input {
-		fmt.Println("It works.")
+		//fmt.Println("It works.")
 	} else {
-		fmt.Println("It doesn't work.")
+		//fmt.Println("It doesn't work.")
 	}
 	return true
 }
