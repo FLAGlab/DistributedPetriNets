@@ -46,7 +46,6 @@ func server(sn *ServiceNode) {
 		// this interface is for test purposes only
 		//Interface: "wlp1s0",
 		//LogLevel: "debug",
-		//Port:     6000,
 		Service:  sn.ServiceName,
 	}
 	server, err := sleuth.New(config)
@@ -55,9 +54,5 @@ func server(sn *ServiceNode) {
 		panic(err.Error())
 	}
 	defer server.Close()
-	if sn.ServiceName == "ping" {
-		http.ListenAndServe(":8080", handler)
-	} else {
-		http.ListenAndServe(":8081", handler)
-	}
+	http.ListenAndServe(":0", handler)
 }

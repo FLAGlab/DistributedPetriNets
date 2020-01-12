@@ -20,13 +20,10 @@ The code is contained in a docker container
 
 `docker build -t dpn .`
 
-`docker run -i -t --network host dpn`
+`docker run -i -t --network host -v "$(pwd)":/go/src/github.com/FLAGlab/DistributedPetriNets dpn`
 
 You can run the code by going to the `go/src/github.com/FLAGlab/DistributedPetriNets` and then running the main using the command `go run main.go`
 
 ### Running the tests
 
 All tests can be run using `go test ./...`
-
-
-## Elixir
