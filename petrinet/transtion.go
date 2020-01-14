@@ -55,11 +55,11 @@ func (t *Transition) Fire() error {
 		currArc.Place.Marks -= currArc.Weight
 		//fmt.Printf("Fire 1!= %v \n", currArc.Place.Marks)
 	}
-	/*
+
 	for _, currArc := range t.OutArcs {
 		currArc.Place.Marks += currArc.Weight
 	}
-	*/
+	
 	for _, remArc := range t.RemoteOutArcs {
 		//fmt.Printf("voy a disparar, remoto \n")
 		remArc.fire()
