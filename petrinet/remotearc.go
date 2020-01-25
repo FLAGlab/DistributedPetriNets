@@ -45,8 +45,8 @@ func (rt *RemoteArc) fire(t []Token) bool {
 	if err != nil {
 		return false
 	}
+	fmt.Printf("%v\n",vals)
 	body := bytes.NewBuffer(vals)
-	//fmt.Println("Hey Hey llegue aca")
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
 	response, err := rt.Client.Do(request)
 	if err != nil {
