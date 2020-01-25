@@ -34,6 +34,7 @@ func (rt RemoteArc) String() string {
 
 //@TODO
 func (rt *RemoteArc) canFire() bool {
+	rt.Client.WaitFor(rt.ServiceName)
 	return true
 }
 
