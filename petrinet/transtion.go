@@ -37,7 +37,7 @@ func (t Transition) String() string {
 func (t *Transition) CanFire() bool {
 	ans := true
 	for _, currArc := range t.InArcs {
-		ans = ans && currArc.Place.Marks >= currArc.Weight
+		ans = ans && currArc.Place.GetNumMarks() >= currArc.Weight
 	}
 	for _, remArc := range t.RemoteOutArcs {
 		ans = ans && remArc.canFire()
@@ -50,19 +50,20 @@ func (t *Transition) Fire() error {
 	if !t.CanFire() {
 		return errors.New("Trying to fire transition that can't be fired")
 	}
+	marks := []Token{}
 	for _, currArc := range t.InArcs {
 		//fmt.Printf("Fire 1 = %v \n", currArc.Place.Marks)
-		currArc.Place.Marks -= currArc.Weight
+		marks = append(marks,currArc.Place.GetMark(currArc.Weight)...)
 		//fmt.Printf("Fire 1!= %v \n", currArc.Place.Marks)
 	}
 
 	for _, currArc := range t.OutArcs {
-		currArc.Place.Marks += currArc.Weight
+		currArc.Place.AddMarks(marks[0:currArc.Weight-1])
 	}
 	
 	for _, remArc := range t.RemoteOutArcs {
 		//fmt.Printf("voy a disparar, remoto \n")
-		remArc.fire()
+		remArc.fire(marks)
 		//fmt.Printf("Disparo remoto, o no? \n")
 	}
 	return nil

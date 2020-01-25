@@ -7,7 +7,7 @@ import (
 // Place of the Petri net
 type Place struct {
 	ID    int
-	Marks int
+	Marks []Token
 	Label string
 }
 
@@ -16,10 +16,19 @@ func (p Place) String() string {
 }
 
 // GetMarks gets the marks on the place
-func (p *Place) GetMarks() int {
-	return p.Marks
+func (p *Place) GetNumMarks() int {
+	return len(p.Marks)
 }
 
+func (p *Place) AddMarks(t []Token) {
+	p.Marks = append(p.Marks, t...)
+}
+
+func (p *Place) GetMark(l int) []Token {
+	x := p.Marks[0:l-1]
+	p.Marks = p.Marks[l:]
+	return x
+}
 //InitService creates and runs the node containing the net
 func (p *Place) InitService(_serviceName string) {
 	srv := &ServiceNode{

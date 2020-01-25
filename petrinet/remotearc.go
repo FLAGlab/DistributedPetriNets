@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"encoding/json"
 
 	"github.com/ursiform/sleuth"
 )
@@ -37,10 +38,14 @@ func (rt *RemoteArc) canFire() bool {
 }
 
 //@TODO update fire to hanlde time outs
-func (rt *RemoteArc) fire() bool {
+func (rt *RemoteArc) fire(t []Token) bool {
 	rt.Client.WaitFor(rt.ServiceName)
-	input := "This is the value I am inputting."
-	body := bytes.NewBuffer([]byte(input))
+	t = t[0:rt.Weight-1]
+	vals, err := json.Marshal(t)
+	if err != nil {
+		return false
+	}
+	body := bytes.NewBuffer(vals)
 	//fmt.Println("Hey Hey llegue aca")
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
 	response, err := rt.Client.Do(request)
@@ -50,10 +55,6 @@ func (rt *RemoteArc) fire() bool {
 	}
 	//fmt.Println("Hey si pude")
 	output, _ := ioutil.ReadAll(response.Body)
-	if string(output) == input {
-		//fmt.Println("It works.")
-	} else {
-		//fmt.Println("It doesn't work.")
-	}
+	fmt.Printf("%v\n", output)
 	return true
 }

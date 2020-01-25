@@ -20,7 +20,7 @@ func main() {
 	// should be set so that all services are on the same subnet.
 	config := &sleuth.Config{
 		Handler:  handler,
-		//Interface: "wlp1s0",
+		Interface: "wlp1s0",
 		LogLevel: "debug",
 		Service:  "echo-service",
 	}
@@ -29,5 +29,5 @@ func main() {
 		panic(err.Error())
 	}
 	defer server.Close()
-	http.ListenAndServe(":8080", handler)
+	http.ListenAndServe(":5000", handler)
 }

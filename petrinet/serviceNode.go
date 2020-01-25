@@ -1,8 +1,10 @@
 package petrinet
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"fmt"
 
 	"github.com/ursiform/sleuth"
 )
@@ -19,8 +21,13 @@ func (ph *petriHandler) Init(p *Place) {
 func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, _ := ioutil.ReadAll(req.Body)
 	//fmt.Println("Addign Token")
+	var tokens []Token
+	err := json.Unmarshal(body,&tokens)
+	if err != nil {
+		fmt.Printf("Fallo :v \n")
+	}
 	//fmt.Printf("====Old Marks %v \n", h.place.GetMarks())
-	h.place.Marks++
+	h.place.AddMarks(tokens)
 	//fmt.Printf("====New marks %v \n", h.place.GetMarks())
 	res.Write(body)
 }

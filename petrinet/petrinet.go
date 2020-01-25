@@ -40,7 +40,6 @@ type PetriNet struct {
 	Transitions  map[int]*Transition
 	Places       map[int]*Place
 	MaxPriority  int
-	MarksHistory []map[int]int
 }
 
 func (pn PetriNet) String() string {
@@ -58,8 +57,8 @@ func (pn PetriNet) String() string {
 	return s + "\n"
 }
 
-func (pn *PetriNet) AddPlace(_id, _marks int, _label string) {
-	pn.Places[_id] = &Place{ID: _id, Marks: _marks, Label: _label}
+func (pn *PetriNet) AddPlace(_id int, _label string) {
+	pn.Places[_id] = &Place{ID: _id, Label: _label}
 }
 
 func (pn *PetriNet) AddTransition(_id, _priority int) {
