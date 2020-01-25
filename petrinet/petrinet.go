@@ -114,9 +114,9 @@ func (pn *PetriNet) run() {
 
 
 //InitService
-func (pn *PetriNet) InitService() {
+func (pn *PetriNet) InitService(interf string) {
 	for i := range pn.Places {
-		go pn.Places[i].InitService(pn.Places[i].Label)
+		go pn.Places[i].InitService(pn.Places[i].Label, interf)
 	}
 	time.Sleep(4 * time.Second)
 	pn.run()

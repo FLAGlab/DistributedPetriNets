@@ -34,6 +34,7 @@ func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 //ServiceNode structure of a node associated to its place
 type ServiceNode struct {
+	Interface string
 	PetriPlace  *Place
 	ServiceName string
 }
@@ -50,7 +51,7 @@ func server(sn *ServiceNode) {
 	config := &sleuth.Config{
 		Handler: handler,
 		// this interface is for test purposes only
-		//Interface: "wlp1s0",
+		Interface: sn.Interface,
 		//LogLevel: "debug",
 		Service:  sn.ServiceName,
 	}

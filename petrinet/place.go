@@ -30,8 +30,9 @@ func (p *Place) GetMark(l int) []Token {
 	return x
 }
 //InitService creates and runs the node containing the net
-func (p *Place) InitService(_serviceName string) {
+func (p *Place) InitService(_serviceName, interf string) {
 	srv := &ServiceNode{
+		Interface: interf,
 		PetriPlace:  p,
 		ServiceName: _serviceName, //strconv.Itoa(p.ID),
 	}
