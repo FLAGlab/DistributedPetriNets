@@ -52,13 +52,14 @@ func (t *Transition) Fire() error {
 	}
 	marks := []Token{}
 	for _, currArc := range t.InArcs {
+
 		marks = append(marks,currArc.Place.GetMark(currArc.Weight)...)
 	}
 
 	for _, currArc := range t.OutArcs {
-		currArc.Place.AddMarks(marks[0:currArc.Weight-1])
+		currArc.Place.AddMarks(marks[0:currArc.Weight])
 	}
-	fmt.Printf("%v\n",marks)
+	fmt.Printf("This marks %v\n",marks)
 	for _, remArc := range t.RemoteOutArcs {
 		remArc.fire(marks)
 	}
