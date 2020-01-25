@@ -40,7 +40,8 @@ func (rt *RemoteArc) canFire() bool {
 //@TODO update fire to hanlde time outs
 func (rt *RemoteArc) fire(t []Token) bool {
 	rt.Client.WaitFor(rt.ServiceName)
-	t = t[0:rt.Weight-1]
+	t = t[0:rt.Weight]
+	fmt.Printf("%v\n",t)
 	vals, err := json.Marshal(t)
 	if err != nil {
 		return false
