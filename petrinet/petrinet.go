@@ -99,14 +99,14 @@ func (pn *PetriNet) AddRemoteOutArc(_transition, weight int, serviceName string)
 
 func (pn *PetriNet) run() {
 	for {
-		//fmt.Printf("%v Start to fire transitions current pn = %v\n",time.Now() ,pn)
+		fmt.Printf("%v Start to fire transitions current pn = %v\n",time.Now() ,pn)
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 		for _, i := range r.Perm(len(pn.Transitions)) {
 			i = i+1
-			//fmt.Printf("%v firing the %v-th transitions %v\n",time.Now(), i ,pn.Transitions[i])
+			fmt.Printf("%v firing the %v-th transitions %v\n",time.Now(), i ,pn.Transitions[i])
 			pn.Transitions[i].Fire()
 		}
-		//fmt.Printf("%v End to fire transitions current pn = %v\n", time.Now() ,pn)
+		fmt.Printf("%v End to fire transitions current pn = %v\n", time.Now() ,pn)
 		time.Sleep(5 * time.Second)
 	}
 	
