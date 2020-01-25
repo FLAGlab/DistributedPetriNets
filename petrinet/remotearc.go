@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"encoding/json"
+	"time"
 
 	"github.com/ursiform/sleuth"
 )
@@ -34,8 +35,17 @@ func (rt RemoteArc) String() string {
 
 //@TODO
 func (rt *RemoteArc) canFire() bool {
-	rt.Client.WaitFor(rt.ServiceName)
-	return true
+	c1 := make(chan bool, 1)
+	go func() {
+		rt.Client.WaitFor(rt.ServiceName)
+		c1 <- true
+	}()
+	select {
+		case <-c1:
+			return true
+		case <- time.After(3 * time.Second):
+			return false
+	}
 }
 
 //@TODO update fire to hanlde time outs
