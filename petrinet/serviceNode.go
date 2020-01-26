@@ -62,5 +62,5 @@ func server(sn *ServiceNode) {
 		panic(err.Error())
 	}
 	defer server.Close()
-	http.ListenAndServe(":0", handler)
+	http.ListenAndServe(":9000", handler)
 }
