@@ -11,6 +11,7 @@ type Place struct {
 	ID    int
 	Marks []Token
 	Label string
+	Nombre string
 }
 
 func (p Place) String() string {
@@ -23,7 +24,7 @@ func (p *Place) GetNumMarks() int {
 }
 
 func (p *Place) AddMarks(t []Token) {
-	f, err := os.OpenFile(p.Label+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(p.Label+"_"+p.Nombre+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
         log.Println(err)
 	}
