@@ -18,6 +18,6 @@ func main() {
 	p.AddInArc(1, 2, 1)
 	p.AddOutArc(2, 2, 1)
 	p.AddInArc(2, 1, 1)
-	p.AddRemoteOutArc(1, 1, "receive")
+	p.AddRemoteOutArc(1, 1, "car")
 	p.InitService(interf)
 }

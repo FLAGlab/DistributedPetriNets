@@ -12,7 +12,7 @@ func main() {
 	p := pn.InitPN(0)
 	p.AddTransition(1, 1) //send
 	p.AddTransition(2, 1) //commit
-	p.AddPlace(1, "receive")
+	p.AddPlace(1, "car")
 	p.AddPlace(2, "vsadb")
 	//p.Places[1].AddMarks([]pn.Token{pn.Token{1}})
 	p.AddInArc(1, 2, 1)
