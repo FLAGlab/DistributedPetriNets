@@ -54,12 +54,12 @@ func (rt *RemoteArc) canFire() bool {
 func (rt *RemoteArc) fire(t []Token) bool {
 	rt.Client.WaitFor(rt.ServiceName)
 	t = t[0:rt.Weight]
-	fmt.Printf("%v\n",t)
+	//fmt.Printf("%v\n",t)
 	vals, err := json.Marshal(t)
 	if err != nil {
 		return false
 	}
-	fmt.Printf("%v\n",vals)
+	//fmt.Printf("%v\n",vals)
 	body := bytes.NewBuffer(vals)
 	request, _ := http.NewRequest("POST", "sleuth://"+rt.ServiceName+"/", body)
 	response, err := rt.Client.Do(request)
@@ -67,8 +67,10 @@ func (rt *RemoteArc) fire(t []Token) bool {
 		//panic(err.Error())
 		return false
 	}
-	fmt.Println("Hey si pude")
-	output, _ := ioutil.ReadAll(response.Body)
-	fmt.Printf("%v\n", output)
+	//fmt.Println("Hey si pude")
+	output , _ := ioutil.ReadAll(response.Body)
+	if string(output) != string(vals) {
+		fmt.Printf("Error sending %v reciving %v\n",vals, output)
+	}
 	return true
 }

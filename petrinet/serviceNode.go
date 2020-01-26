@@ -20,7 +20,7 @@ func (ph *petriHandler) Init(p *Place) {
 
 func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, _ := ioutil.ReadAll(req.Body)
-	fmt.Printf("%v",body)
+	//fmt.Printf("%v",body)
 	var tokens []Token
 	err := json.Unmarshal(body,&tokens)
 	if err != nil {
