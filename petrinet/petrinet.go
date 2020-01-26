@@ -107,7 +107,7 @@ func (pn *PetriNet) run() {
 			pn.Transitions[i].Fire()
 		}
 		fmt.Printf("%v End to fire transitions current pn = %v\n", time.Now() ,pn)
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	
 }
@@ -118,7 +118,7 @@ func (pn *PetriNet) InitService(interf string) {
 	for i := range pn.Places {
 		go pn.Places[i].InitService(pn.Places[i].Label, interf)
 	}
-	time.Sleep(4 * time.Second)
+	time.Sleep(6 * time.Second)
 	pn.run()
 }
 

@@ -20,7 +20,7 @@ func main() {
 	// should be set so that all services are on the same subnet.
 	config := &sleuth.Config{
 		Handler:  handler,
-		Interface: "wlp1s0",
+		Interface: "enp2s0",
 		LogLevel: "debug",
 		Service:  "echo-service",
 	}

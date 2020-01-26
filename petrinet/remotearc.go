@@ -37,13 +37,15 @@ func (rt RemoteArc) String() string {
 func (rt *RemoteArc) canFire() bool {
 	c1 := make(chan bool, 1)
 	go func() {
+		fmt.Printf("waiting for %v\n", rt.ServiceName)
 		rt.Client.WaitFor(rt.ServiceName)
 		c1 <- true
 	}()
 	select {
 		case <-c1:
 			return true
-		case <- time.After(3 * time.Second):
+		case <- time.After(5 * time.Second):
+			fmt.Printf("timeout waiting for %v\n",rt.ServiceName)
 			return false
 	}
 }
@@ -65,7 +67,7 @@ func (rt *RemoteArc) fire(t []Token) bool {
 		//panic(err.Error())
 		return false
 	}
-	//fmt.Println("Hey si pude")
+	fmt.Println("Hey si pude")
 	output, _ := ioutil.ReadAll(response.Body)
 	fmt.Printf("%v\n", output)
 	return true
