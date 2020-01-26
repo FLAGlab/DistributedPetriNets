@@ -25,16 +25,16 @@ func (p *Place) AddMarks(t []Token) {
 }
 
 func (p *Place) GetMark(l int) []Token {
-	fmt.Printf("%v %v/n",l,p.Marks)
 	x := p.Marks[0:l]
 	p.Marks = p.Marks[l:]
-	fmt.Printf("%v %v/n",l,x)
+	fmt.Printf("%v %v/n", l, x)
 	return x
 }
+
 //InitService creates and runs the node containing the net
 func (p *Place) InitService(_serviceName, interf string) {
 	srv := &ServiceNode{
-		Interface: interf,
+		Interface:   interf,
 		PetriPlace:  p,
 		ServiceName: _serviceName, //strconv.Itoa(p.ID),
 	}
