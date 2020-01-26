@@ -28,18 +28,17 @@ eg.
 package petrinet
 
 import (
-	"fmt"
+	"math/rand"
 	"sort"
 	"time"
-	"math/rand"
 )
 
 // PetriNet struct, has an id, transitions and places
 type PetriNet struct {
-	ID           int
-	Transitions  map[int]*Transition
-	Places       map[int]*Place
-	MaxPriority  int
+	ID          int
+	Transitions map[int]*Transition
+	Places      map[int]*Place
+	MaxPriority int
 }
 
 func (pn PetriNet) String() string {
@@ -51,9 +50,9 @@ func (pn PetriNet) String() string {
 		i++
 	}
 	sort.Ints(keys)
-	for _, k := range keys {
+	/*for _, k := range keys {
 		s = fmt.Sprintf("%v\n%v", s, pn.Places[k])
-	}
+	}*/
 	return s + "\n"
 }
 
@@ -93,25 +92,21 @@ func (pn *PetriNet) AddRemoteOutArc(_transition, weight int, serviceName string)
 	pn.Transitions[_transition].AddRemoteOutArc(
 		RemoteArc{
 			ServiceName: serviceName,
-			Weight:  weight,
+			Weight:      weight,
 		})
 }
 
 func (pn *PetriNet) run() {
 	for {
-		fmt.Printf("%v Start to fire transitions current pn = %v\n",time.Now() ,pn)
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 		for _, i := range r.Perm(len(pn.Transitions)) {
-			i = i+1
-			fmt.Printf("%v firing the %v-th transitions %v\n",time.Now(), i ,pn.Transitions[i])
+			i = i + 1
 			pn.Transitions[i].Fire()
 		}
-		fmt.Printf("%v End to fire transitions current pn = %v\n", time.Now() ,pn)
 		time.Sleep(10 * time.Second)
 	}
-	
-}
 
+}
 
 //InitService
 func (pn *PetriNet) InitService(interf string) {
