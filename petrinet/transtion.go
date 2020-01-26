@@ -48,7 +48,7 @@ func (t *Transition) CanFire() bool {
 //Fire fires the transition
 func (t *Transition) Fire() error {
 	if !t.CanFire() {
-		fmt.Println("Trying to fire transition that can't be fired")
+		//fmt.Println("Trying to fire transition that can't be fired")
 		return errors.New("Trying to fire transition that can't be fired")
 	}
 	marks := []Token{}

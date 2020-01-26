@@ -26,10 +26,7 @@ func (h *petriHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Printf("Fallo :v \n")
 	}
-	fmt.Printf("LLEGO ESTA LISTA %v\n",tokens)
-	//fmt.Printf("====Old Marks %v \n", h.place.GetMarks())
 	h.place.AddMarks(tokens)
-	//fmt.Printf("====New marks %v \n", h.place.GetMarks())
 	res.Write(body)
 }
 
@@ -53,7 +50,7 @@ func server(sn *ServiceNode) {
 		Handler: handler,
 		// this interface is for test purposes only
 		Interface: sn.Interface,
-		LogLevel: "debug",
+		LogLevel: "info",
 		Service:  sn.ServiceName,
 	}
 	server, err := sleuth.New(config)
