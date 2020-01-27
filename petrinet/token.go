@@ -6,9 +6,9 @@ import (
 
 // Token for a petri net
 type Token struct {
-	Id int
+	ID int
 }
 
-func (a Token) String() string {
-	return fmt.Sprintf("{Id: %v}", a.Id)
+func (t Token) String() string {
+	return fmt.Sprintf("{Id: %v}", t.ID)
 }
