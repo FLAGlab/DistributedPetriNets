@@ -29,13 +29,12 @@ func (p *Place) AddMarks(t []Token) {
 	if err != nil {
 		log.Println(err)
 	}
-	defer f.Close()
-
 	logger := log.New(f, "", log.LstdFlags)
-	logger.Printf("Service Name, Token Id")
+	//logger.Printf(", Service Name, Token Id")
 	for _, val := range t {
 		logger.Printf(", %v, %v\n", p.Name, val.ID)
 	}
+	defer f.Close()
 	p.Marks = append(p.Marks, t...)
 }
 

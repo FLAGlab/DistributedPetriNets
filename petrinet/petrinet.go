@@ -56,8 +56,9 @@ func (pn PetriNet) String() string {
 	return s + "\n"
 }
 
-func (pn *PetriNet) AddPlace(_id int, _label, _nombre string) {
-	pn.Places[_id] = &Place{ID: _id, Label: _label, Nombre: _nombre}
+//AddPlace adds a new place to the local Petri net
+func (pn *PetriNet) AddPlace(_id int, _label, _name string) {
+	pn.Places[_id] = &Place{ID: _id, Label: _label, Name: _name}
 }
 
 func (pn *PetriNet) AddTransition(_id, _priority int) {
