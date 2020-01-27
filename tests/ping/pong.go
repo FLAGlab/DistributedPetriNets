@@ -15,5 +15,6 @@ func main() {
 	p.AddPlace(1, "pong", name)
 	p.AddInArc(1, 1, 1)
 	p.AddRemoteOutArc(1, 1, "ping")
+	p.Places[1].AddMarks([]pn.Token{pn.Token{2}})
 	p.InitService(interf)
 }
