@@ -2,16 +2,21 @@ package main
 
 import (
 	"fmt"
+	"os"
 	pn "github.com/FLAGlab/DistributedPetriNets/petrinet"
 )
 
 func main() {
+	interf := os.Args[1]
+	name := os.Args[2]
 	fmt.Println("init Mutex net....")
 	p := pn.InitPN(0)
 	// Places
-	p.AddPlace(1, 1, "exit")
-	p.AddPlace(2, 0, "req1")
-	p.AddPlace(3, 0, "req2")
+	p.AddPlace(1,"exit", name)
+	p.AddPlace(2,"req1", name)
+	p.AddPlace(3,"req2",name)
+	p.Places[1].AddMarks([]pn.Token{pn.Token{1}})
+
 	// Transitions
 	p.AddTransition(1, 1)
 	p.AddTransition(2, 1)
@@ -28,5 +33,5 @@ func main() {
 	p.AddRemoteOutArc(1, 1, "grant1")
 	p.AddRemoteOutArc(2, 1, "grant2")
 	
-	p.InitService()
+	p.InitService(interf)
 }
