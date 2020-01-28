@@ -14,7 +14,7 @@ func main() {
 	p.AddTransition(1, 1) //assign_police
 	p.AddTransition(2, 1) //assign_fire
 	p.AddPlace(1, "patients", name)
-	p.Places[1].AddMarks([]pn.Token{pn.Token{2}, pn.Token{1}, pn.Token{3}, pn.Token{4}, pn.Token{5}})
+	//p.Places[1].AddMarks([]pn.Token{pn.Token{2}, pn.Token{1}, pn.Token{3}, pn.Token{4}, pn.Token{5}})
 	p.AddInArc(1, 1, 1)
 	p.AddInArc(1, 2, 1)
 	p.AddRemoteOutArc(1, 1, "police")
