@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"fmt"
 
-	"github.com/ursiform/sleuth"
+	"github.com/FLAGlab/sleuth"
 )
 
 //@TODO Update the handler to manage the requests
@@ -56,6 +56,7 @@ func server(sn *ServiceNode) {
 	server, err := sleuth.New(config)
 
 	if err != nil {
+		fmt.Println("failed here")
 		panic(err.Error())
 	}
 	defer server.Close()

@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ursiform/sleuth"
+	"github.com/FLAGlab/sleuth"
 )
 
 // RemoteArc for arcs crossing nodes

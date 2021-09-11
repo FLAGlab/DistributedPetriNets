@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/ursiform/sleuth"
+	"github.com/FLAGlab/sleuth"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/ursiform/sleuth"
+	"github.com/FLAGlab/sleuth"
 )
 
 type echoHandler struct{}
@@ -23,6 +23,7 @@ func main() {
 		Interface: "enp2s0",
 		LogLevel: "debug",
 		Service:  "echo-service",
+		Port: 5670,
 	}
 	server, err := sleuth.New(config)
 	if err != nil {
