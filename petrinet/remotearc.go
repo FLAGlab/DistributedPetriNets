@@ -2,10 +2,10 @@ package petrinet
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"encoding/json"
 	"time"
 
 	"github.com/FLAGlab/sleuth"
@@ -13,13 +13,13 @@ import (
 
 // RemoteArc for arcs crossing nodes
 type RemoteArc struct {
-	ServiceName string
-	Weight  int
-	Client *sleuth.Client
+	ServiceName string `json:"serviceName"`
+	Weight      int    `json:"weight"`
+	Client      *sleuth.Client
 }
 
 func (rt *RemoteArc) Init() {
-	config := &sleuth.Config{}//LogLevel: "debug"}
+	config := &sleuth.Config{} //LogLevel: "debug"}
 	client, err := sleuth.New(config)
 	rt.Client = client
 	if err != nil {
@@ -27,7 +27,6 @@ func (rt *RemoteArc) Init() {
 	}
 	//defer client.Close()
 }
-
 
 func (rt RemoteArc) String() string {
 	return fmt.Sprintf("{arc to service: %v, weight: %v}", rt.ServiceName, rt.Weight)
@@ -42,11 +41,11 @@ func (rt *RemoteArc) canFire() bool {
 		c1 <- true
 	}()
 	select {
-		case <-c1:
-			return true
-		case <- time.After(5 * time.Second):
-			fmt.Printf("timeout waiting for %v\n",rt.ServiceName)
-			return false
+	case <-c1:
+		return true
+	case <-time.After(5 * time.Second):
+		fmt.Printf("timeout waiting for %v\n", rt.ServiceName)
+		return false
 	}
 }
 
@@ -68,9 +67,9 @@ func (rt *RemoteArc) fire(t []Token) bool {
 		return false
 	}
 	//fmt.Println("Hey si pude")
-	output , _ := ioutil.ReadAll(response.Body)
+	output, _ := ioutil.ReadAll(response.Body)
 	if string(output) != string(vals) {
-		fmt.Printf("Error sending %v reciving %v\n",vals, output)
+		fmt.Printf("Error sending %v reciving %v\n", vals, output)
 	}
 	return true
 }

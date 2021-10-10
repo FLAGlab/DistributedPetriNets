@@ -6,7 +6,7 @@ import (
 
 // Token for a petri net
 type Token struct {
-	ID int
+	ID int `json:"id"`
 }
 
 func (t Token) String() string {

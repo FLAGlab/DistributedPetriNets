@@ -8,10 +8,11 @@ import (
 
 // Place of the Petri net
 type Place struct {
-	ID    int
-	Marks []Token
-	Label string
-	Name  string
+	ID          int     `json:"id"`
+	Marks       []Token `json:"tokens"`
+	Label       string  `json:"label"`
+	Name        string  `json:"name"`
+	ServiceName string  `json:"serviceName"`
 }
 
 func (p Place) String() string {
@@ -47,11 +48,11 @@ func (p *Place) GetMark(l int) []Token {
 }
 
 //InitService creates and runs the node containing the net
-func (p *Place) InitService(_serviceName, interf string) {
+func (p *Place) InitService(interf string) {
 	srv := &ServiceNode{
 		Interface:   interf,
 		PetriPlace:  p,
-		ServiceName: _serviceName, //strconv.Itoa(p.ID),
+		ServiceName: p.ServiceName, //strconv.Itoa(p.ID),
 	}
 	srv.RunService()
 }

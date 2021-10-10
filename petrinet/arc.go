@@ -6,8 +6,9 @@ import (
 
 // Arc between Petri net components
 type Arc struct {
-	Place  *Place
-	Weight int
+	Place   *Place `json:"place"`
+	Weight  int    `json:"weight"`
+	PlaceID int    `json:"placeId"`
 }
 
 func (a Arc) String() string {

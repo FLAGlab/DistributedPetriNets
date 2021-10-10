@@ -7,31 +7,29 @@ import (
 
 // Transition of a PetriNet
 type Transition struct {
-	ID            int
-	Priority      int
-	InArcs        []Arc
-	OutArcs       []Arc
-	RemoteOutArcs []RemoteArc
+	ID            int         `json:"id"`
+	Priority      int         `json:"priority"`
+	InArcs        []Arc       `json:"inArcs"`
+	OutArcs       []Arc       `json:"outArcs"`
+	RemoteOutArcs []RemoteArc `json:"remoteArcs"`
 }
 
-
-
-func (t Transition) String() string {
-	arcListString := func(list []Arc) string {
-		ans := "["
-		for _, item := range list {
-			if ans != "[" {
-				ans += ", "
-			}
-			ans += item.String()
-		}
-		ans += "]"
-		return ans
-	}
-	return fmt.Sprintf(
-		"{ID: %v, priority: %v, inArcs: %v, outArcs: %v}",
-		t.ID, t.Priority, arcListString(t.InArcs), arcListString(t.OutArcs))
-}
+// func (t Transition) String() string {
+// 	arcListString := func(list []Arc) string {
+// 		ans := "["
+// 		for _, item := range list {
+// 			if ans != "[" {
+// 				ans += ", "
+// 			}
+// 			ans += item.String()
+// 		}
+// 		ans += "]"
+// 		return ans
+// 	}
+// 	return fmt.Sprintf(
+// 		"{ID: %v, priority: %v, inArcs: %v, outArcs: %v}",
+// 		t.ID, t.Priority, arcListString(t.InArcs), arcListString(t.OutArcs))
+// }
 
 //CanFire checks if the transition can fire
 func (t *Transition) CanFire() bool {
@@ -54,13 +52,13 @@ func (t *Transition) Fire() error {
 	marks := []Token{}
 	for _, currArc := range t.InArcs {
 
-		marks = append(marks,currArc.Place.GetMark(currArc.Weight)...)
+		marks = append(marks, currArc.Place.GetMark(currArc.Weight)...)
 	}
 
 	for _, currArc := range t.OutArcs {
 		currArc.Place.AddMarks(marks[0:currArc.Weight])
 	}
-	fmt.Printf("This marks %v\n",marks)
+	fmt.Printf("This marks %v\n", marks)
 	for _, remArc := range t.RemoteOutArcs {
 		remArc.fire(marks)
 	}
@@ -79,6 +77,34 @@ func (t *Transition) AddOutArc(_arc Arc) {
 
 //AddRemoteOutArc arcs crossing nodes, alwasys from transition to place
 func (t *Transition) AddRemoteOutArc(_rarc RemoteArc) {
-	_rarc.Init()
+	//_rarc.Init()
 	t.RemoteOutArcs = append(t.RemoteOutArcs, _rarc)
+}
+
+func (t *Transition) loadPlaces(places map[int]*Place) error {
+	for idx, arc := range t.InArcs {
+		id := arc.PlaceID
+		place, ok := places[id]
+
+		if !ok {
+			return errors.New(fmt.Sprintf("No such place with ID: %v", id))
+		}
+		t.InArcs[idx].Place = place
+
+	}
+	for idx, arc := range t.OutArcs {
+		id := arc.PlaceID
+		place, ok := places[id]
+		if !ok {
+			return errors.New(fmt.Sprintf("No such place with ID: %v", id))
+		}
+		t.OutArcs[idx].Place = place
+	}
+	return nil
+}
+
+func (t *Transition) Init() {
+	for idx := range t.RemoteOutArcs {
+		t.RemoteOutArcs[idx].Init()
+	}
 }

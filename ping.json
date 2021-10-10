@@ -1,0 +1,37 @@
+{
+    "id": 1,
+    "transitions":{
+        "1":{
+            "id":1,
+            "priority":1,
+            "inArcs":[
+                {
+                    "weight":1,
+                    "placeId": 1
+                    
+                }
+            ],
+            "remoteArcs":[
+                {
+                    "serviceName": "pong",
+                    "weight":1
+                }
+            ]
+        }
+    },
+    "places":{
+        "1":{
+            "id":1,
+            "tokens":[
+                {
+                    "id":1
+                }
+            ],
+            "label":"ping",
+            "name":"ping",
+            "serviceName": "ping"
+        }
+    },
+    "priority": 1,
+    "interface": "enp2s0"
+}

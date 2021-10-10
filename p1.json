@@ -1,0 +1,53 @@
+{
+    "id": 1,
+    "transitions":{
+        "1":{
+            "id":1,
+            "priority":1,
+            "inArcs":[
+                {
+                    "weight":1,
+                    "placeId": 1
+                    
+                }
+            ],
+            "outArcs":[
+                {
+                    "weight":1,
+                    "placeId": 2   
+                }
+
+            ],
+            "remoteArcs":[
+                {
+                    "serviceName": "test",
+                    "weight":1
+                }
+            ]
+        }
+    },
+    "places":{
+        "1":{
+            "id":1,
+            "marks":[],
+            "label":"test1",
+            "name":"test1",
+            "serviceName": "test",
+            "tokens": [
+                {
+                    "id":1
+                }
+            ]
+        },
+        "2":{
+            "id":2,
+            "marks":[],
+            "label":"test2",
+            "name":"test2",
+            "serviceName": "test2"
+        } 
+    },
+    "priority": 1,
+    "interface": "enp2s0"
+
+}

@@ -28,33 +28,34 @@ eg.
 package petrinet
 
 import (
+	"log"
 	"math/rand"
-	"sort"
 	"time"
 )
 
 // PetriNet struct, has an id, transitions and places
 type PetriNet struct {
-	ID          int
-	Transitions map[int]*Transition
-	Places      map[int]*Place
-	MaxPriority int
+	ID          int                 `json:"id"`
+	Transitions map[int]*Transition `json:"transitions"`
+	Places      map[int]*Place      `json:"places"`
+	MaxPriority int                 `json:"priority"`
+	Interf      string              `json:"intreface"`
 }
 
-func (pn PetriNet) String() string {
-	s := ""
-	keys := make([]int, len(pn.Places))
-	i := 0
-	for k := range pn.Places {
-		keys[i] = k
-		i++
-	}
-	sort.Ints(keys)
-	/*for _, k := range keys {
-		s = fmt.Sprintf("%v\n%v", s, pn.Places[k])
-	}*/
-	return s + "\n"
-}
+// func (pn PetriNet) String() string {
+// 	s := ""
+// 	keys := make([]int, len(pn.Places))
+// 	i := 0
+// 	for k := range pn.Places {
+// 		keys[i] = k
+// 		i++
+// 	}
+// 	sort.Ints(keys)
+// 	/*for _, k := range keys {
+// 		s = fmt.Sprintf("%v\n%v", s, pn.Places[k])
+// 	}*/
+// 	return s + "\n"
+// }
 
 //AddPlace adds a new place to the local Petri net
 func (pn *PetriNet) AddPlace(_id int, _label, _name string) {
@@ -110,12 +111,23 @@ func (pn *PetriNet) run() {
 }
 
 //InitService
-func (pn *PetriNet) InitService(interf string) {
+func (pn *PetriNet) InitService() {
 	for i := range pn.Places {
-		go pn.Places[i].InitService(pn.Places[i].Label, interf)
+		go pn.Places[i].InitService(pn.Interf)
 	}
 	time.Sleep(6 * time.Second)
 	pn.run()
+}
+
+func (pn *PetriNet) Init() {
+	for _, transition := range pn.Transitions {
+		err := transition.loadPlaces(pn.Places)
+		if err != nil {
+			log.Fatalf("Error loading transition %v", transition)
+		}
+		transition.Init()
+	}
+	pn.InitService()
 }
 
 //InitPN Initializes a new Petri net
