@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pong-deployment
+  labels:
+    app: pong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pong
+  template:
+    metadata:
+      labels:
+        app: pong
+    spec:
+      hostNetwork: true
+      containers:
+      - name: pong
+        image: dpn:latest
+        args: ["pong.json"]
+        imagePullPolicy: Never
