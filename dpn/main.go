@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/FLAGlab/DistributedPetriNets/dpetrinet/cmd"
+import "github.com/FLAGlab/DistributedPetriNets/dpn/cmd"
 
 func main() {
 	cmd.Execute()

@@ -27,9 +27,9 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "dpetrinet",
-	Short: "dpetrinet is a distributed petrinet runner that allow custom petrinets",
-	Long:  `dpetrinet is a distributed petrinet runner that allow custom petrinets.`,
+	Use:   "dpn",
+	Short: "dpn is a distributed petrinet runner that allow custom petrinets",
+	Long:  `dpn is a distributed petrinet runner that allow custom petrinets.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
