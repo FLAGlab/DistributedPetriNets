@@ -10,12 +10,12 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(runCmd)
 }
 
-var versionCmd = &cobra.Command{
+var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Run a  distributed petrinet node using a json file",
+	Short: "Run a distributed petrinet node using a json file",
 	Long:  `Run a distributed petrinet node usgin the path defined as first arg`,
 	Run: func(cmd *cobra.Command, args []string) {
 		pn := petrinet.PetriNet{}
